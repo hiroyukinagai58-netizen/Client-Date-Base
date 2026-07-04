@@ -1,0 +1,1905 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>船主データベース</title>
+<style>
+  :root{
+    --navy-50:#e6e6f5; --navy-100:#c2c2e8; --navy-200:#8f8fd1;
+    --navy-400:#3d3d9e; --navy-600:#101072; --navy-700:#08084a; --navy-800:#000061; --navy-900:#000040;
+    --accent:#9a7b3f; --accent-dark:#6e5829; --accent-light:#f1ead9;
+    --bg:#f4f5f7; --bg-card:#ffffff; --bg-panel:#f7f8fa;
+    --line:#e2e5ea; --line-strong:#c9ced6;
+    --text:#1a1f29; --text-soft:#5b6472; --text-faint:#8a92a0;
+    --ok:#2e7d4f; --warn:#b4571c; --danger:#b3372c;
+    --radius:10px; --radius-lg:14px;
+    --shadow:0 1px 2px rgba(10,15,25,0.06), 0 1px 8px rgba(10,15,25,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Sans","Yu Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+    line-height:1.6;
+  }
+  #app{min-height:100vh; display:flex; flex-direction:column;}
+
+  /* TOP BAR */
+  .topbar{
+    background:var(--navy-800);
+    color:#f1ede2;
+    padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.16);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;
+    flex-shrink:0;
+  }
+  .brand-text h1{font-size:15px;font-weight:600;margin:0;letter-spacing:.02em;color:#fff;}
+  .brand-text p{font-size:11px;margin:1px 0 0;color:#9fb0c3;}
+  .topnav{display:flex; gap:4px; background:rgba(255,255,255,0.06); padding:3px; border-radius:9px;}
+  .topnav button{
+    background:transparent;border:none;color:#cfd9e6;font-size:13px;font-weight:500;
+    padding:7px 16px;border-radius:7px;cursor:pointer;transition:.15s;font-family:inherit;
+  }
+  .topnav button.active{background:var(--accent); color:#fff;}
+  .topnav button:not(.active):hover{background:rgba(255,255,255,0.08); color:#fff;}
+  .top-actions{display:flex; gap:8px; align-items:center;}
+  .icon-btn{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#e8ecf1;
+    width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer; font-size:15px;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,0.16);}
+
+  /* MAIN LAYOUT */
+  main{flex:1; max-width:1280px; width:100%; margin:0 auto; padding:20px 24px 64px;}
+
+  /* TOOLBAR */
+  .toolbar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .search-wrap{position:relative; flex:1; min-width:220px; max-width:420px;}
+  .search-wrap input{
+    width:100%; padding:9px 12px 9px 34px; border:1px solid var(--line-strong); border-radius:8px;
+    font-size:13px; background:#fff; font-family:inherit; color:var(--text);
+  }
+  .search-wrap input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-light);}
+  .search-icon{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:14px; pointer-events:none;}
+  select, .select{
+    padding:9px 30px 9px 12px; border:1px solid var(--line-strong); border-radius:8px; font-size:13px;
+    background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%23919aa6"/></svg>') no-repeat right 11px center;
+    font-family:inherit; color:var(--text); appearance:none; cursor:pointer;
+  }
+  select:focus{outline:none; border-color:var(--accent);}
+  .btn{
+    padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;
+    border:1px solid var(--line-strong); background:#fff; color:var(--text); font-family:inherit;
+    display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .btn:hover{background:var(--bg-panel);}
+  .btn-primary{background:var(--navy-700); border-color:var(--navy-700); color:#fff;}
+  .btn-primary:hover{background:var(--navy-800);}
+  .btn-accent{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn-accent:hover{background:var(--accent-dark);}
+  .btn-danger{color:var(--danger); border-color:#e8c4bd;}
+  .btn-danger:hover{background:#fdf1ef;}
+  .btn-sm{padding:5px 10px; font-size:12px;}
+  .spacer{flex:1;}
+  .count-pill{
+    font-size:12px; color:var(--text-soft); background:var(--bg-panel); border:1px solid var(--line);
+    padding:6px 12px; border-radius:20px; white-space:nowrap;
+  }
+
+  /* COMPANY GRID */
+  .company-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:14px;
+  }
+  .ccard{
+    background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:16px 18px; cursor:pointer; transition:.12s; position:relative; box-shadow:var(--shadow);
+  }
+  .ccard:hover{border-color:var(--navy-400); transform:translateY(-1px);}
+  .ccard-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
+  .ccard-area{
+    font-size:11px; font-weight:700; color:var(--navy-600); background:var(--navy-50);
+    padding:3px 9px; border-radius:20px; white-space:nowrap; letter-spacing:.02em;
+  }
+  .ccard-name{font-size:15px; font-weight:600; color:var(--text); margin:0 0 2px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ccard-name-en{font-size:11.5px; color:var(--text-faint); margin:0 0 4px; font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ccard-ceo{font-size:12.5px; color:var(--text-soft); margin:0;}
+  .ccard-web-btn{
+    width:24px; height:24px; border-radius:6px; border:1px solid var(--line-strong); background:#fff;
+    color:var(--navy-700); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    padding:0; flex-shrink:0;
+  }
+  .ccard-web-btn:hover{background:var(--navy-50); border-color:var(--navy-400);}
+  .ccard-meta{margin-top:12px; padding-top:12px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:5px;}
+  .ccard-row{display:flex; gap:7px; font-size:12px; color:var(--text-soft); align-items:flex-start;}
+  .ccard-row .ico{width:14px; flex-shrink:0; color:var(--text-faint); text-align:center; margin-top:1px;}
+  .ccard-row span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ccard-stats{display:flex; gap:8px; margin-top:12px;}
+  .stat-chip{
+    font-size:11px; font-weight:600; padding:4px 9px; border-radius:6px; background:var(--bg-panel); color:var(--navy-600);
+    border:1px solid var(--line);
+  }
+
+  /* DETAIL PANEL (slide-over) */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,20,18,0.42); display:none; z-index:50;
+    align-items:stretch; justify-content:flex-end;
+  }
+  .overlay.show{display:flex;}
+  .drawer{
+    width:min(640px, 94vw); background:var(--bg); height:100%; overflow-y:auto;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.18); animation:slidein .18s ease-out;
+  }
+  @keyframes slidein{from{transform:translateX(24px); opacity:.6;} to{transform:translateX(0); opacity:1;}}
+  .drawer-head{
+    background:var(--navy-800); color:#fff; padding:20px 24px; position:sticky; top:0; z-index:2;
+  }
+  .drawer-head-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+  .drawer-area{font-size:11px; font-weight:700; color:#cfe0f5; background:rgba(255,255,255,0.12); padding:3px 9px; border-radius:20px; display:inline-block; margin-bottom:8px;}
+  .drawer-head h2{font-size:18px; margin:0 0 3px; font-weight:600; color:#fff;}
+  .drawer-head .ceo{font-size:13px; color:#aebfd8; margin:0;}
+  .close-btn{background:rgba(255,255,255,0.1); border:none; color:#fff; width:30px;height:30px;border-radius:7px;cursor:pointer; font-size:15px; flex-shrink:0;}
+  .close-btn:hover{background:rgba(255,255,255,0.2);}
+  .drawer-tabs{display:flex; gap:4px; margin-top:14px;}
+  .drawer-tabs button{
+    background:transparent; border:none; color:#aebfd8; font-size:12.5px; font-weight:600; padding:7px 4px;
+    cursor:pointer; border-bottom:2px solid transparent; font-family:inherit;
+  }
+  .drawer-tabs button.active{color:#fff; border-bottom-color:var(--accent);}
+  .drawer-body{padding:20px 24px 40px;}
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .field{margin-bottom:4px;}
+  .field.full{grid-column:1/-1;}
+  .field label{display:block; font-size:11px; font-weight:700; color:var(--text-faint); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  .field .val{font-size:13.5px; color:var(--text); white-space:pre-line; word-break:break-word;}
+  .field .val.empty{color:var(--text-faint); font-style:italic;}
+  .field input, .field textarea{
+    width:100%; border:1px solid var(--line-strong); border-radius:7px; padding:8px 10px; font-size:13px;
+    font-family:inherit; color:var(--text); background:#fff;
+  }
+  .field textarea{resize:vertical; min-height:60px; line-height:1.5;}
+  .field input:focus, .field textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-light);}
+  .section-title{font-size:13px; font-weight:700; color:var(--navy-600); margin:22px 0 10px; padding-top:14px; border-top:1px solid var(--line);}
+  .section-title:first-child{margin-top:0; padding-top:0; border-top:none;}
+
+  /* VESSEL ROWS IN DRAWER */
+  .vessel-mini{
+    background:#fff; border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;
+  }
+  .vessel-mini:hover{border-color:var(--navy-400);}
+  .vessel-mini-name{font-weight:600; font-size:13px;}
+  .vessel-mini-sub{font-size:11.5px; color:var(--text-soft); margin-top:2px;}
+  .badge{font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:5px; white-space:nowrap;}
+  .badge-fleet{background:#e3f0e6; color:var(--ok);}
+  .badge-order{background:#fdf0e0; color:var(--warn);}
+  .badge-sold{background:#f0eee8; color:var(--text-faint);}
+
+  /* VESSEL TABLE VIEW */
+  .table-wrap{
+    background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius-lg); overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{
+    background:var(--navy-50); color:var(--navy-700); font-weight:700; text-align:left;
+    padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; font-size:11.5px;
+    letter-spacing:.02em; cursor:pointer; user-select:none;
+  }
+  thead th:hover{background:var(--navy-100);}
+  thead th .sort-ind{color:var(--text-faint); margin-left:3px; font-size:10px;}
+  tbody td{padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tbody tr:hover{background:var(--bg-panel);}
+  tbody tr{cursor:pointer;}
+  tbody tr:last-child td{border-bottom:none;}
+  .imo-mono{font-family:var(--font-mono, monospace); color:var(--text-soft); font-size:11.5px;}
+  .ellipsis{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  /* EMPTY STATE */
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--text-soft);
+  }
+  .empty-state .ei{font-size:28px; color:var(--text-faint); margin-bottom:10px;}
+  .empty-state p{margin:4px 0; font-size:13px;}
+
+  /* TOAST */
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(0);
+    background:var(--navy-800); color:#fff; padding:10px 18px; border-radius:9px; font-size:13px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.2); z-index:100; opacity:0; pointer-events:none; transition:.2s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-8px);}
+
+  /* CONFIRM MODAL */
+  .modal-overlay{position:fixed; inset:0; background:rgba(20,20,18,0.45); display:none; align-items:center; justify-content:center; z-index:60;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff; border-radius:12px; padding:22px 24px; width:min(380px,90vw); box-shadow:0 12px 40px rgba(0,0,0,0.25);}
+  .modal-box h3{margin:0 0 8px; font-size:15px;}
+  .modal-box p{margin:0 0 18px; font-size:13px; color:var(--text-soft);}
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
+
+  .sr-only{position:absolute; width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+  ::placeholder{color:var(--text-faint);}
+
+  @media (max-width: 720px){
+    main{padding:16px 12px 48px;}
+    .field-grid{grid-template-columns:1fr;}
+    .topbar{padding:12px 14px;}
+    .topnav button{padding:6px 10px; font-size:12px;}
+  }
+</style>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+</head>
+<body>
+<h2 class="sr-only">愛媛・瀬戸内エリアの船主企業と保有船舶を検索・閲覧・編集できるデータベースアプリ</h2>
+<div id="app"></div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h3 id="confirmTitle">削除しますか？</h3>
+    <p id="confirmMsg">この操作は取り消せません。</p>
+    <div class="modal-actions">
+      <button class="btn" id="confirmCancel">キャンセル</button>
+      <button class="btn btn-danger" id="confirmOk" style="background:var(--danger); color:#fff; border-color:var(--danger);">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const SEED_COMPANIES = [{"company_id": 1, "area": "今治", "name": "大河内海運株式会社", "ceo": "大河内 啓介", "pic": null, "address": "〒799-2101 愛媛県今治市波方町波方甲2264-35", "tel": "本社: 0898-41-9318", "mail": "okouchi@lime.ocn.ne.jp", "registered_owner": "Batanagar Shipping Corp\nBatanagar/Daichi Kisen\nBatanagar/Daito Shipping\nHainan Marine/Ookchi Kaiun\nHawaii Shipping Corp\nHawaii Shipping/Daichi Kisen\nIntersky Shipping Corp\nOkuchi Kaiun/Batanagar\nSanta Marine Inc", "related_company": null, "banks": "広島銀行、山口銀行(?)", "broker": "丸紅、SOMEC、三菱", "type_of_vessel": "Bulk Carrier\nContainer Ship\nLPG Tanker", "shipyard": "【Japan】\nImabari Shbldg\nTsuneishi Shbldg - Fkym - curr\nIwagi Zosen Co Ltd\nShin Kasado Dockyard Co Ltd\nMitsui Tamano\nHakodate Dock - Hakodate\nShin Kochi\n\n【China】\nQingdao Beihai Shipbuilding HI\nSungdong Shipbuilding & Eng\nJiangsu Yangzi-Mitsui SB\nNantong COSCO KHI Ship Eng\nDalian COSCO KHI Ship Eng\n\n【Korea】\nSTX Offshore & Shbldg - Jinhae\nHD Hyundai Mipo Co Ltd\nHyundai Mipo Dockyard Co Ltd", "tc_fleet": "MV HL MIDLAND (182K/2011, Imabari, H-Line)\nMV NAVIOS POLLUX (181K/2009, STX, Navios)\nMV SANTA BARBARA (179K/2015, Beihai, Cargill)\nMV NAVIOS STELLAR (169K/2009, Sungdong, Navios)\nMV AIN AL KASFAH (83K/2024, Yangzijiang Mitsui, ASYAD)\nMV PAN CONCORD (83K/2024, Yangzijiang Mitsui, Pan Ocean)\nMV RISOLUTO (83K/2025, DACKS, K Line)\nMV KANKO MARU (82K/2022, Yangzijiang Mitsui, Bunge?)\nMV CHORUS (82K/2011, Tsuneishi, NS United)\nMV HAMPTON SKY (82K/2021, DACKS, Crystal Sea)\nMV CL SPRUCE (64K/2025, DACKS, Chinaland)\nMV PAN SALUS (64K/2025, Iwagi, Pan Ocean)\nMV EXCELSIOR DIVA (64K/2023, Shin Kasado, K Line)\nMV AFRICAN SETO (61K/2012, Iwagi, MUR)\nMV AFRICAN CARDINAL (61K/2019, DACKS, MUR)\nMV SANTA RITA (56K/2010, Mitsui, Oetker)\nMV GLOBAL SYMPHONY (34K/2014, Hakodate, NYK Bulk)\nMV GLOBAL ARC (33K/2013, Shin Kochi, NYK Bulk)", "bbc_fleet": "MV BELAWAN (22K/2007, Imabari, KMTC)\nMV PASCO BERCEM (34K/2025, Hyundai Mipo, Pascogas)\nMV PASCO BERKE (29K/2024, Hyundai Mipo, Pascogas)\nMV PASCO RONI (30K/2023, Hyundai Mipo, Pascogas)", "tc_charterer": "H-Line Shipping Co Ltd (H-Line)\nNavios Corporation Management\nCargill International SA (Cargill)\nASYAD Shipping (ASYAD)\nPan Ocean\nK Line\nBunge\nNS United\nCrystal Sea\nChinaland Shipping\nMUR Shipping BV (MUR)\nRudolf A Oetker A/S & Co KG (Oetker)\nNYK Bulk & Projects Carriers (NYK Bulk)", "bbc_charterer": "Korea Marine Transport Co Ltd (KMTC)\nPascogas Deniz Isletmeleri AS", "newbuilding": "MV TBN (82K/2026, YAMIC, Capital Maritime)\nMV TBN (82K/2026, YAMIC, TBN)"}, {"company_id": 2, "area": "今治", "name": "大洋海運株式会社", "ceo": "赤尾 明彦", "pic": "赤尾 健太郎", "address": "〒794-0027　今治市南大門町1丁目6-10", "tel": "本社: 0898-22-5096\n携帯: 090-8051-4195", "mail": "common@taiyo-kaiun.co.jp", "registered_owner": "Seavance Shipping SA", "related_company": null, "banks": null, "broker": "三井物産、伊藤忠、", "type_of_vessel": "Bulk Carrier\nChemical/Products Tanker\nContainer Ship (Fully Cellular)", "shipyard": "Japan\nImabari Shbldg - Hiroshima\nMinaminippon Shbldg - Ozai\nShin Kasado Dockyard Co Ltd\nI-S Shipyard Co Ltd\nIwagi Zosen Co Ltd\nImabari Shbldg - Imabari\nFukuoka Shipbuilding - Fukuoka\n\nChina\nJiangsu Newyangzi Shipbuilding\nJiangsu Hantong WNG HI\n\nPhilippines\nTsuneishi Heavy Inds Cebu\n\nSouth Korea\nHD Hyundai Mipo Dockyard Co Ltd", "tc_fleet": "MV CAPE TAWEELAH (183K/2017, Imabari Hiroshima, K-Line)\nMV AOM GAIA (82K/2014, Tsuneishi Cebu, Augusta)\nMV SANTA ACE (64K/2022, Minaminippon, Swire Bulk)\nMV ULTRA CONFIDENCE (64K/2025, Minaminippon, Ultrabulk)\nMV BELMONDO (64K/2023, Minaminippon, Lighthouse)\nMV BELTOKYO (64K/2021, Shin Kasado, Lighthouse)\nMV AVERY POINT (64K/2025, Jiangsu Hantong, Asiatic Lloyd)\nMV FEDERAL INNOKO (64K/2020, I-S, Fednav)\nMV DIAMOND QUEEN (61K/2013, Shin Kasado, Toei)\nMV WEST TREASURE (61K/2014, Iwagi, Wah Kwong)\nMV GARDENIA K (38K/2014, Imabari, Oldendorff)\nMV ISHIZUCHI STAR (38K/2017, I-S, Pacific Basin)", "bbc_fleet": "MV MOUNT ALBERTA (209K/2020, New Yangzi, EPS)\nMV MAGENTA RAY (20K/2019, Fukuoka, Ace Quantum)\nMV TOROGOZ (21K/2025, Hyundai Mipo, Crowley)", "tc_charterer": "K-Line\nAugusta\nSwire Bulk\nUltrabulk\nLighthouse\nAsiatic Lloyd\nFednav\nToei\nWah Kwong\nOldendorff\nPacific Basin", "bbc_charterer": "EPS\nAce Quantum\nClowley", "newbuilding": null}, {"company_id": 3, "area": "今治", "name": "大道海運株式会社", "ceo": "大河内 崇介", "pic": null, "address": "〒794-0062  愛媛県今治市馬越町2丁目5番10号", "tel": "本社: 0898-55-8722携帯: 090-3180-6852", "mail": "shusuke.okochi@daidokaiun.co.jp", "registered_owner": "Fair Wind Marshall SA\nFair Wind Singapore Pte Ltd", "related_company": null, "banks": "広島銀行、愛媛銀行、福岡銀行、山陰合同銀行、徳島大正銀行、四国銀行", "broker": "丸紅、伊藤忠、住商マリン", "type_of_vessel": "Bulk Carrier\nLPG Tanker\nChemical/Products Tanker\nContainer Ship (Fully Cellular)\nGeneral Cargo Ship\nBunkering Tanker", "shipyard": "Japan\nNamura Shipbuilding Co Ltd\nNantong COSCO KHI Ship Eng\nImabari Shipbuilding\nTadotsu Shipyard Co Ltd\nKawasaki HI - Kobe - curr\nOshima Shipbuilding\nHakodate Dock - Hakodate\nShin Kurushima Kochijyuko\nI-S Shipyard Co Ltd\nMurakami Hide\nShitanoe Shipbuilding Co Ltd\nSasaki Shbldg - Osakikamijima\nKitanihon\nYokuyo Shipyard Corp\nHigaki\n\nChina\nJiangsu Newyangzi Shipbuilding\nJiangsu Hantong WNG HI\n\nPhilippines\nTsuneishi Heavy Inds Cebu\n\nSouth Korea\nHD Hyundai Mipo Dockyard Co Ltd", "tc_fleet": "MV FLORIDA (182K/2022, Namura, Bunge)\nMV NEW ORLEANS (181K/2015, Waigaoqiao, Diana)\nMV GLORY BONANZA (179K/2010, HHI Gunsan, Erasmus)\nMV GLORY DEVOTION (92K/2013, Namura, Erasmus)\nMV GCL HAZIRA (82K/2021, DACKS, Bunge)\nMV STELLA NAVIS (82K/2021, DACKS, Olam)\nMV TOMINI PINE (64K/2026, Imabari, Tomini)\nMV TYME (64K/2021, Tadotsu, ADM)\nMV SUPREME VALOR (59K/2011, Kawasaki, Cargill)\nMV SUPER DRY (43K/2026, Oshima, Drydel)\nMV TOMINI SAKURA (42K/2025, Oshima, Tomini)\nMV BC FIDELITY (41K/2026, Jiangmen Nanyang, FGM)\nMV BC SERENITY (40K/2022, Hakodate, FGM)\nMV PARABOLICA (40K/2024, Jiangmen Nanyang, Transatlantic)\nMV ARRABBIATA (40K/2025, Jiangmen Nanyang, Transatlantic)\nMV BC LIBERTY (40K/2025, Namura, FGM)\nMV BC INTEGRITY (40K/2025, Namura, FGM)\nMV OLIVIA (40K/2024, Shin Kurushima, Norden)\nMV BIRGIT (40K/2024, Shin Kurushima, Minship)\nMV ES JASMINE (39K/2018, Shanghaiguan, Erasmus)\nMV BC AMBITION (38K/2021, I-S, Stallion)\nMV ABYSINIAN (36K/2014, Jinling, Ariston)\nMV ABTENAUER (36K/2014, Jinling, Ariston)\nMV OCEAN ECHO (13.6K/2025, Higaki, NYK)", "bbc_fleet": "MV GAS DIAMOND (6K/2018, Murakami, Erasmus Gas)\nMV GAS QUEST (5K/2009, Shitanoe, Erasmus Gas)\nMV GAS ACE (5K/2023, Shitanoe, Erasmus Gas)\nMV GAS BLOSSOM (5K/2023, Shitanoe, Erasmus Gas)\nMV GAS STAR (5K/2008, Sasaki, Erasmus Gas)\nMV GAS RESPECT (4K/2014, Kitanihon, Erasmus Gas)\nMV CMA CGM ETOSHA (76K/2024, Qingdao Yangfan, Delphis)\nMV ASL QINGDAO (25K/2024, Huanghai, Asean Seas)\nMV ASL HAIPHONG (25K/2024, Huanghai, Emirates Shipping)\nMV ERASMUS ICON (23K/2005, Guangzhou Wenchong, Erasmus)\nMV ANL MOUNT WILHELM (23K/2012, Guangzhou Wenchong, CMA CGM)\nMV ERASMUS GOAL (22K/2013, CSBC, Erasmus)\nMV ERASMUS HOPE (17K/2008, Yangzijiang, Erasmus)\nMV ERASMUS EFFORT (12K/2025, Yokuyo, Maersk)", "tc_charterer": "Bunge\nDiana\nErasmus\nOlam\nTomini\nADM\nCargill\nDrydel\nFGM\nTransatlantic\nNorden\nMinship\nStallion\nAriston", "bbc_charterer": "Erasmus Gas\nDelphis\nAsean Seas\nEmirates Shipping\nCMA CGM\nMaersk", "newbuilding": "MV TBN (40K/2029, SKDY)\nMV TBN (64K/2029, New Dayang)", "name_en": "Daido Kaiun Co., Ltd.", "website": "https://daidokaiun.co.jp/"}, {"company_id": 4, "area": "今治", "name": "たちばな海運有限会社", "ceo": "山岡 太郎", "pic": null, "address": "〒794-0802 愛媛県今治市南鳥生町3丁目3-31", "tel": "本社: 089-822-7719\n携帯: 090-7631-5599", "mail": "tachibana-kaiun@s8.dion.ne.jp\ny.t_tachibana_kaiun@ab.auone-net.jp", "registered_owner": "SAKAE SHIPPING SA", "related_company": null, "banks": "愛媛銀行、山口銀行、四国銀行、阿波銀行", "broker": "丸紅、住商マリン", "type_of_vessel": "Bulk Carrier\nLPG Tanker", "shipyard": "Nantong COSCO KHI Ship Eng\nIwagi Zosen Co Ltd\nShimanami Shipyard Co Ltd\nKitanihon Shipbuilding Co Ltd\nYamanaka Zosen KK", "tc_fleet": "MV SUMMER QUEEN (64K/2025, DACKS, Bunge)\nMV LOWLANDS FIDELITY (64K/2023, DACKS, Cobelfret)\nMV LANGLOIS SKIATHOS (64K/2026, Iwagi, Langlois)\nMV ROMY (38K/2020, Shimanami, Berge Bulk)\nMV BERGE SCAFELL PIKE (38K/2020, Shimanami, Berge Bulk)", "bbc_fleet": "MV GAS VICTORY (5K/2015, Kitanihon, Erasmus)", "tc_charterer": "Bunge\nCobelfret\nLanglois\nBerge Bulk\nLatsco\nM/Maritime", "bbc_charterer": "Erasmus", "newbuilding": "MV TBN (40K/2026, JNS, Swire)\nMV TBN (42K/2029, Oshima, Latsco)\nMV TBN (64K/2030, Oshima, M/Maritime)"}, {"company_id": 5, "area": "松山", "name": "八幡浜汽船有限会社", "ceo": "山本 嘉秀", "pic": "川邊 新也\n山枡 義弘", "address": "〒790-0001 愛媛県松山市一番町3-3-6 センターポイントビル5階", "tel": "本社: 089-932-5312\n山本: 090-8690-4211\n川邊: 090-7170-5488\n山枡: 090-9004-0713", "mail": "yawatahamakisen@ykisen.com\nyoshi-y@ceres.ocn.ne.jp\nshinya@ykisen.com\ny.matthew@ykisen.com", "registered_owner": "Salter Shipping SA-PAN\nYawatahama Kisen/Whale Lotus\nSalter/Yawatahama", "related_company": null, "banks": "SMTB", "broker": "丸紅、住商マリン", "type_of_vessel": "Bulk Carrier\nChemical/Products Tanker\nLPG Tanker\nProducts Tanker", "shipyard": "Nantong COSCO KHI Ship Eng\nImabari Shbldg - Imabari\nNew Times Shipbuilding Co Ltd\nMitsui Chiba Ichihara\nOshima Shipbuilding Co Ltd\nSPP Shipbuilding - Tongyeong\nConstanta\nKitanihon\nFukuoka Shipbuilding - Nagasak\nHyundai Mipo Dockyard Co Ltd\nKurinoura Dockyard Co Ltd\nMinamiawaji Zosen Co Ltd", "tc_fleet": "MV FEDERAL YUKINA (36K/2010, Oshima, Fednav)", "bbc_fleet": "MV OBE ODYSSEY (64K/2024, DACKS, OBE)\nMV OBE UNITY (64K/2025, DACKS, OBE)\nMV AFRICAN BARI BIRD (63K/2017, Imabari, MUR)\nMV BELLIGHT (63K/2016, New Times, Belship)\nMV AFRICAN PUFFIN (56K/2014, Mitsui, MUR)\nMV FATIMA ZARAH (50K/2013, SPP, Northstar)\nMV ANTARES (40K/2022, Constanta, Antares)\nMV BOW ENGINEER (30K/2006, Kitanihon, Odfjell)\nMV BOCHEM MARENGO (25K/2017, Fukuoka, Bochem)\nMV EDGE GALAXY (20K/2017, Fukuoka, MOL Chem)", "tc_charterer": "Fednav", "bbc_charterer": "OBE Ships Maritime SA\nMUR Shipping BV\nBelships ASA\nNorthstar Shipping Ventures\nAntares Shipping SAS\nOdfjell Tankers AS\nBochem Hong Kong Ltd\nMOL Chem", "newbuilding": "MV TBN (42K/2027, Oshima, Fednav)\nMV TBN (64K/2028, JNS, Fednav)\nMV TBN (64K/2028, JNS, OBE)"}, {"company_id": 6, "area": "新居浜", "name": "横山海運株式会社", "ceo": "横山 政司", "pic": "横山 有生(副社長)", "address": "〒792-0011 愛媛県新居浜市西原町2-6-6", "tel": "会社: 0897-33-1800\n携帯: 090-8694-6050", "mail": null, "registered_owner": "Sealift Maritime SA", "related_company": null, "banks": null, "broker": "三井物産", "type_of_vessel": "Bulk Carrier\nGeneral Cargo Ship", "shipyard": null, "tc_fleet": "MV MERCURY ISLAND (64K/2024, DACKS)\nMV GEIYO K (55K/2016, KHI)\nMV HARLEQUIN (41K/2023, I-S)\nMV ASAHI OCEAN (32K/2013, Hakodate)\nMV PINTAIL (38K/2021, Kanda)\nMV MINNEAPOLIS MIYO (38K/2020, Kanda)\nMV ELM K (33K/2012, Kanda)", "bbc_fleet": "MV NAVIOS ALEGRIA (85K/2016, Imabari)\nMV AFRICAN WARBLER (38K/2020, Kanda)\nMV AFRICAN GANNET (38K/2018, Kanda)", "tc_charterer": "Canfornav\nNavios \nPacific Basin\nIntermarine (Harren)\nMOL DB\nMUR", "bbc_charterer": null, "newbuilding": "MV TBN (84K/2028 TBN, Commerge via OMC)"}, {"company_id": 7, "area": "新居浜", "name": "青野海運株式会社", "ceo": "青野 力", "pic": "丸山 智豪", "address": "本社: 〒792-0003  愛媛県新居浜市新田町1丁目1番17号\n東京: 〒103-0027 東京都中央区京橋2-14-20 香蘭社ビル3階", "tel": "本社: TEL 0897-33-8545東京: TEL 03-6700-6070丸山携帯: 090-5710-2420", "mail": "tsutomu@aono.co.jpt_maruyama@aono.co.jp", "registered_owner": "GLEAM LINE\nT&T MARINE", "related_company": null, "banks": "伊予銀行", "broker": "SOMEC、住商マリン", "type_of_vessel": "Bulk Carrier\nGeneral Cargo Ship", "shipyard": "Tsuneishi Cebu\nOSHIMA\nSKDY", "tc_fleet": "MV CLARA INSIGNIA (61K/2019, SKDY)\nMV LESEDI QUEEN (50K/2018, Oshima)\nMV SOFIA (42K/2025, SKDY)\nMV CHEMROUTE PEGASUS (26K/2012, SKDY)", "bbc_fleet": null, "tc_charterer": "Global Chartering\nCargill\nNS United\nSusesea\nIino", "bbc_charterer": null, "newbuilding": "MV TBN (64K/2028 NACKS, Cymona)\nMV TBN (58K/2028 OSHIMA, NSU)\nMV TBN (58K/2028 OSHIMA, NYKBP)", "name_en": "Aono Marine Co., Ltd.", "website": "https://www.aono.co.jp/"}, {"company_id": 8, "area": "西条", "name": "冨士鉄工株式会社", "ceo": "松本靖男 ", "pic": "安倍 三貴\n宮下 俊哉", "address": "〒793-0046 愛媛県西条市港1-10", "tel": "本社: TEL 0897-56-5500\n宮下携帯: 080-2982-6825", "mail": "ship@fuji-tekko.co.jp", "registered_owner": null, "related_company": null, "banks": null, "broker": null, "type_of_vessel": "LPG Tanker\nBulk Carrier\nContainer Ship (Fully Cellular)\nChem/Oil Products Tanker", "shipyard": "Murakami Hide\nImabari\nOnomichi\nHyundai Mipo", "tc_fleet": "MV ARAGO (5K/2014, Murakami)\nMV CORINTHIAN (6K/2015, Murakami)\nMV FRANCOIS (6K/2021, Murakami)\nMV LOUIS (6K/2015, Murakami)", "bbc_fleet": "MV TENDER SOUL (39K/2024, Hyundai Mipo)", "tc_charterer": "Geogas\nEmpire Bulkers\nEurobulk", "bbc_charterer": null, "newbuilding": "MV TBN (40K/2027, Onomichi)\nMV TBN (13K/2026, Murakami)\nMV TBN (13K/2026, Murakami)"}, {"company_id": 9, "area": "阿南", "name": "四宮タンカー株式会社", "ceo": "四宮 新二", "pic": null, "address": "〒774-0021 徳島県阿南市津乃峰町長浜440-3", "tel": "会社: 0884-28-0300携帯: 090-3186-3834", "mail": null, "registered_owner": "Four Shrine Corp\nSTK LINE SA", "related_company": null, "banks": "徳島大正銀行", "broker": "丸紅、SOMEC、伊藤忠、MB", "type_of_vessel": "Bulk Carrier\nGeneral Cargo Ship\nAsphalt/Bitumen Tanker\nContainer Ship\nLPG Tanker", "shipyard": null, "tc_fleet": "MV AFRICAN BUZZARD\nMV AFRICAN LOON\nMV OCEAN ERSA\nMV TSUNOMINE BULKER\nMV TSUNOMINE BULKER \nMV CENTURION BIZAN", "bbc_fleet": "MV ES WARRIOR\nMV MSC LORENA\nMV MISAGO ARROW\nMV KIWI ARROW\nMV THE BLACKSMITH\nMT GAS XANADU", "tc_charterer": null, "bbc_charterer": null, "newbuilding": "MV TBN (40K/2027 IMABARI, UNION MARITIME via SOMEC)\nMV TBN (40K/2027 HAKODATE, TOMINI SHIPPING via MB)", "name_en": "SHINOMIYA TANKER CO.,LTD", "website": "https://shinomiya-tanker.com/"}, {"company_id": 10, "area": "阿南", "name": "八重川海運株式会社", "ceo": "村田 泰", "pic": null, "address": "〒774-0014 徳島県阿南市学原町中西15-2 海運ビル3F", "tel": "会社: 0884-22-0364\n携帯: 090-3460-3815", "mail": null, "registered_owner": "Eight River Shipping SA", "related_company": null, "banks": "阿波銀行、四国銀行、伊予銀行", "broker": null, "type_of_vessel": "Bulk Carrier\nChemical/Products Tanker\nLimestone Carrier\nGeneral Cargo Ship (Open Hatch)", "shipyard": null, "tc_fleet": "MV GIRASOLE RIVER (82K/2020, DACKS, ADM)\nMV ETG UBUNTU (64K/2022, DACKS, ETG)\nMV QUEEN RIVER (64K/2025, DACKS, Bunge)\nMV NORD ALLEGRO (61K/2022, DACKS, Norden)\nMV VORTEX RIVER (58K/2023, Oshima, NYK)\nMV INDIGO RIVER (56K/2018, Oshima, NYK)\nMT GOUSEA (50K/2015, K-Ship, Vitol)\nMT TRANS FJORD (13K/2023, Kitanihon, Seatrans)", "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": "内航船2隻（2027, SKDY、三浦）\nMV TBN (58K/2028 OSHIMA, NYK via XX)"}, {"company_id": 11, "area": "阿南", "name": "篠野海運株式会社", "ceo": "篠野 忠弘", "pic": null, "address": "〒774-0014 徳島県阿南市学原町松ノ久保10番地1", "tel": "会社: 0884-24-8812携帯: 090-8978-3883", "mail": null, "registered_owner": "SASANO KAIUN/TSK MARITIME\nSASANO KISEN/ASK MARITIME", "related_company": null, "banks": "徳島大正銀行", "broker": "SOMEC、伊藤忠、住商マリン、Clarksons", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": "MV ANNECY (40K/2026, Jiangmen Nanyang)\nMV SW MISTRAL I (58K/2011, Tsuneishi Zhoushan)\nMT PS HAMBURG (50K/2016, SPP Shipbuilding)\nMT HIGH FIDELITY (50K/2014, Hyundai-Vinashin)\nMT HIGH LOYALTY (50K/2015, Hyundai Mipo)\nMT PS TOKYO (53K/2025, Minaminippon Shipbuilding)\nMT PS AMALFI (109K/2010, Hudong-Zhonghua)", "tc_charterer": null, "bbc_charterer": "Union Maritime\nd'Amico\nPremuda", "newbuilding": "MV TBN (40K/2028 JNS, Premuda)\nMV TBN (40K/2028 JNS, Premuda)", "name_en": "Sasano Kaiun Co., Ltd.", "website": "https://sasanokaiun.com/"}, {"company_id": 12, "area": "上関", "name": "米中海運株式会社", "ceo": "米中 新吾", "pic": null, "address": "本社: 〒742-1402  山口県熊毛郡上関町大字長島1551-2\n事務所: 〒742-1102  山口県熊毛郡平生町日の出590-6", "tel": "会社: 0820-56-6135\n携帯: 090-4895-2393", "mail": null, "registered_owner": "HOUYOSHI OCEAN CORPORATION (PANAMA)", "related_company": "宝吉海運株式会社(実弟の寿志氏が2025年に設立)", "banks": "山口銀行", "broker": "SOMEC(東京)、住商マリン、JSS、伊藤忠、丸紅", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": null}, {"company_id": 13, "area": "上関", "name": "久宝海運株式会社", "ceo": "中田 敦之", "pic": null, "address": "〒742-1513  山口県熊毛郡田布施町大字麻郷204番1", "tel": "会社: 0820-25-2121携帯: 090-1682-7478", "mail": null, "registered_owner": null, "related_company": null, "banks": "広島銀行、山口銀行、もみじ銀行、山陰合同銀行", "broker": "丸紅、JSS、ヤマミズ", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": null, "name_en": "Kyuho Shipping Co.", "website": "https://lp.aoi.ship-twin.com/"}, {"company_id": 14, "area": "上関", "name": "太平海運有限会社", "ceo": "大田 好男", "pic": "大田 泰(常務)", "address": "〒742-1402  山口県熊毛郡上関町大字長島4490", "tel": "会社: 0820-62-0247\n携帯: 090-6402-0247(常務)", "mail": null, "registered_owner": null, "related_company": null, "banks": "山口銀行、広島銀行", "broker": "Big Bay Shipping、ヤマミズ", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": null}, {"company_id": 15, "area": "周南", "name": "恭海海運株式会社", "ceo": "中山 統太", "pic": "中山 誠(常務)佐藤 遼(室長)", "address": "〒746-0012  山口県周南市政所1丁目１-15", "tel": "会社: 0834-62-4185携帯: 080-1940-7909(社長)", "mail": null, "registered_owner": null, "related_company": null, "banks": "三菱UFJ、みずほ、福岡銀行、広島銀行、山陰合同銀行", "broker": "丸紅、伊藤忠", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": null, "name_en": "Kyokai Kaiun Co., Ltd.", "website": "https://www.kyokai-kaiun.co.jp/"}, {"company_id": 16, "area": "尾道", "name": "西浜汽船株式会社", "ceo": "桑田 智也", "pic": "橋口 あゆみ", "address": "〒720-0551 広島県尾道市浦崎町4360番地", "tel": "会社: 0848-73-5115(社長)\n会社: 0848-73-5116(橋口)\n携帯: 080-9130-1998(橋口)", "mail": "company@kuwata-dock.com\ntomoya-kuwata@amail.plada.or.jp\nhashiguchi.a@kuwata-dock.com", "registered_owner": "Sea Wealth Navigation SA", "related_company": null, "banks": "中国銀行、山口銀行、広島銀行、山陰合同銀行", "broker": "三井物産/OMC、ニュートン、Clarksons", "type_of_vessel": "Bulk Carrier\nCrude Oil Tanker\nGeneral Cargo Ship", "shipyard": "Imabari Shipbuilding\nTsuneishi\nTsuneishi, Zhoushan\nTsuneishi, Cebu\nMitsui\nSKDY, Toyohashi\nKanda", "tc_fleet": "MV AM SHRADDHA (82K/2019, Tsuneishi, ArcelorMittal)\nMV INTELLIGENCE DIVA (64K/2025, Tsuneishi Cebu, Comerge)\nMV SERENE SKY (56K/2011, Mitsui, Cobelfret)\nMV BUFFLEHEAD (40K/2022, SKDY, Carfornav)\nMV FELICIA K (33K/2012, Kanda)", "bbc_fleet": "MV RAGNAR (96K/2013, Imabari, Oaktree)\nMV TM LUSTROUS (83K/2021, Tsuneishi Zhoushan, Oldendorff)\nMV ARCHANGEL GABRIEL (108K/2010, Tsuneishi Zhoushan, Holger)", "tc_charterer": "ArcelorMittal\nComerge\nCobelfret\nCarfornav", "bbc_charterer": "Oaktree\nOldendorf\nHolger", "newbuilding": "MV TBN (66K/2026 Tsuneishi Zhoushan, Meadway)\nMV TBN (64K/2028 Nantong Xiangyu, Union Maritime)\nMV TBN (40K/2028 JNS, Union Maritime)"}, {"company_id": 17, "area": "笠岡", "name": "牧野海運株式会社", "ceo": "牧野 純男", "pic": "牧野 真吾(専務)\n高峰 敏明(部長)", "address": "〒714-0086  岡山県笠岡市五番町6-22 マリンビル3階", "tel": "会社: 0865-63-7800\n携帯: 090-1269-9011(専務)", "mail": null, "registered_owner": null, "related_company": null, "banks": "広島銀行、徳島大正銀行", "broker": "伊藤忠", "type_of_vessel": null, "shipyard": null, "tc_fleet": null, "bbc_fleet": null, "tc_charterer": null, "bbc_charterer": null, "newbuilding": null}];
+const SEED_VESSELS = [{"vessel_id": 1, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9446532", "name": "HL MIDLAND", "ex_name": null, "flag": "Panama", "dwt": 181502, "m3": 0, "built": "2011-01", "loa": 291.9, "beam": 45, "depth": 24.7, "shipbuilder": "Imabari Shbldg - Saijo", "charterers": "H-Line Shipping Co Ltd", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Hawaii Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 2, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9460033", "name": "NAVIOS POLLUX", "ex_name": null, "flag": "Panama", "dwt": 180727, "m3": 0, "built": "2009-07", "loa": 292, "beam": 45.06, "depth": 24.8, "shipbuilder": "STX Offshore & Shbldg - Jinhae", "charterers": "Navios Corporation Management", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2022-08-31", "sale_price": 33200000, "note": null}, {"vessel_id": 3, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9675951", "name": "SANTA BARBARA", "ex_name": null, "flag": "Marshall Islands", "dwt": 179492, "m3": 0, "built": "2015-01", "loa": 295, "beam": 46.06, "depth": 24.8, "shipbuilder": "Qingdao Beihai Shipbuilding HI", "charterers": "Cargill International SA", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Hainan Marine/Okochi Kaiun", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 4, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9498781", "name": "NAVIOS STELLAR", "ex_name": null, "flag": "Panama", "dwt": 169001, "m3": 0, "built": "2009-12", "loa": 287.5, "beam": 45.056, "depth": 24.1, "shipbuilder": "Sungdong Shipbuilding & Eng", "charterers": "Navios Shipmanagement Inc", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2008-09-17", "sale_price": 108500000, "note": null}, {"vessel_id": 5, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9966867", "name": "AIN AL KASFAH", "ex_name": null, "flag": "Panama", "dwt": 82834, "m3": 0, "built": "2024-07", "loa": 229, "beam": 32.26, "depth": 20.15, "shipbuilder": "Jiangsu Yangzi-Mitsui SB", "charterers": "ASYAD Shipping", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Intersky Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 6, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9966855", "name": "PAN CONCORD", "ex_name": null, "flag": "Panama", "dwt": 82814, "m3": 0, "built": "2024-05", "loa": 229, "beam": 32.26, "depth": 20.15, "shipbuilder": "Jiangsu Yangzi-Mitsui SB", "charterers": "Pan Ocean", "group_owner": "Daiichi Kisen Co Ltd", "registered_owner": "Hawaii Shipping/Daiichi Kisen", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 7, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1036549", "name": "RISOLUTO", "ex_name": null, "flag": "Panama", "dwt": 82718, "m3": 0, "built": "2025-09", "loa": 228.9, "beam": 32.24, "depth": 20.2, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "K Line", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 8, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9950911", "name": "KANKO MARU", "ex_name": null, "flag": "Panama", "dwt": 82325, "m3": 0, "built": "2022-10", "loa": 229, "beam": 32.26, "depth": 20, "shipbuilder": "Jiangsu Yangzi-Mitsui SB", "charterers": "BUNGE?", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 9, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9461116", "name": "CHORUS", "ex_name": "Hanjin Belawan", "flag": "Panama", "dwt": 82181, "m3": 0, "built": "2011-01", "loa": 228.99, "beam": 32.29, "depth": 20.05, "shipbuilder": "Tsuneishi Shbldg - Fkym - curr", "charterers": "NS UNITED", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Intersky Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 10, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9909041", "name": "HAMPTON SKY", "ex_name": null, "flag": "Panama", "dwt": 82002, "m3": 0, "built": "2021-04", "loa": 228.9, "beam": 32.24, "depth": 20.2, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "CRYSTAL SEA ", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 11, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1021374", "name": "CL SPRUCE", "ex_name": null, "flag": "Panama", "dwt": 64181, "m3": 0, "built": "2025-03", "loa": 199.9, "beam": 32.24, "depth": 19.4, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "Chinaland Shipping", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Santa Marine Inc", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 12, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1047043", "name": "PAN SALUS", "ex_name": null, "flag": "Panama", "dwt": 63757, "m3": 0, "built": "2025-02", "loa": 199.98, "beam": 32.24, "depth": 19.3, "shipbuilder": "Iwagi Zosen Co Ltd", "charterers": "Pan Ocean", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Okouchi Kaiun/Batanagar", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 13, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9960198", "name": "EXCELSIOR DIVA", "ex_name": null, "flag": "Panama", "dwt": 63739, "m3": 0, "built": "2023-04", "loa": 199.98, "beam": 32.24, "depth": 19.3, "shipbuilder": "Shin Kasado Dockyard Co Ltd", "charterers": "K Line", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Okouchi Kaiun/Batanagar", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 14, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9614983", "name": "AFRICAN SETO", "ex_name": "Hanjin Seto", "flag": "Panama", "dwt": 61422, "m3": 0, "built": "2012-06", "loa": 199.98, "beam": 32.283, "depth": 18.6, "shipbuilder": "Iwagi Zosen Co Ltd", "charterers": "MUR Shipping BV", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 15, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9856919", "name": "AFRICAN CARDINAL", "ex_name": null, "flag": "Panama", "dwt": 61226, "m3": 0, "built": "2019-09", "loa": 199.9, "beam": 32.24, "depth": 18.6, "shipbuilder": "Dalian COSCO KHI Ship Eng", "charterers": "MUR Shipping BV", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 16, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9478999", "name": "SANTA RITA", "ex_name": null, "flag": "Panama", "dwt": 55677, "m3": 0, "built": "2010-12", "loa": 189.99, "beam": 32.3, "depth": 17.9, "shipbuilder": "Mitsui Tamano", "charterers": "Rudolf A Oetker A/S & Co KG", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 17, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9609342", "name": "GLOBAL SYMPHONY", "ex_name": null, "flag": "Hong Kong, China", "dwt": 34446, "m3": 0, "built": "2014-09", "loa": 179.97, "beam": 30.04, "depth": 14.05, "shipbuilder": "Hakodate Dock - Hakodate", "charterers": "NYK Bulk & Projects Carriers", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 18, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9644043", "name": "GLOBAL ARC", "ex_name": null, "flag": "Panama", "dwt": 33438, "m3": 0, "built": "2013-07", "loa": 176.83, "beam": 28.8, "depth": 14.2, "shipbuilder": "Shin Kochi", "charterers": "NYK Bulk & Projects Carriers", "group_owner": "Daiichi Kisen Co Ltd", "registered_owner": "Batanagar/Daiichi Kisen", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2018-08-29", "sale_price": 15400000, "note": null}, {"vessel_id": 19, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "Container Ship (Fully Cellular)", "imo": "9412828", "name": "BELAWAN", "ex_name": null, "flag": "Hong Kong, China", "dwt": 21973, "m3": 0, "built": "2007-06", "loa": 171.99, "beam": 27.6, "depth": 14, "shipbuilder": "Imabari Shbldg - Imabari", "charterers": "Korea Marine Transport Co Ltd", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar/Daito Shipping", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 20, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "LPG Tanker", "imo": "9996006", "name": "PASCO BERCEM", "ex_name": null, "flag": "Marshall Islands", "dwt": 33655, "m3": 45173, "built": "2025-04", "loa": 189.96, "beam": 30.4, "depth": 18.8, "shipbuilder": "HD Hyundai Mipo Co Ltd", "charterers": "Pascogas Deniz Isletmeleri AS", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Hawaii Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 21, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "LPG Tanker", "imo": "9978028", "name": "PASCO BERKE", "ex_name": "Paul Oldendorff", "flag": "Marshall Islands", "dwt": 29175, "m3": 39200, "built": "2024-10", "loa": 179.86, "beam": 28.7, "depth": 18.7, "shipbuilder": "HD Hyundai Mipo Co Ltd", "charterers": "Pascogas Deniz Isletmeleri AS", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Batanagar Shipping Corp", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 22, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "In Fleet", "biz": null, "type": "LPG Tanker", "imo": "9940447", "name": "PASCO RONI", "ex_name": null, "flag": "Marshall Islands", "dwt": 29991, "m3": 39200, "built": "2023-11", "loa": 171.99, "beam": 27.6, "depth": 14, "shipbuilder": "Hyundai Mipo Dockyard Co Ltd", "charterers": "Pascogas Deniz Isletmeleri AS", "group_owner": "Daiichi Kisen Co Ltd", "registered_owner": "Batanagar/Daiichi Kisen", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 23, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "Sold", "biz": null, "type": "Bulk Carrier", "imo": "9883027", "name": "MAXIMOS", "ex_name": null, "flag": "Liberia", "dwt": 63400, "m3": 0, "built": "2020-06", "loa": null, "beam": null, "depth": null, "shipbuilder": "Imabari Shbldg - Imabari", "charterers": "Meadway Bulkers Ltd", "group_owner": "Daiichi Kisen Co Ltd", "registered_owner": "Batanagar/Daiichi Kisen", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 24, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "Orderbook", "biz": null, "type": "Bulk Carrier", "imo": "TBN", "name": "JIANGSU YANGZI-MITSUI YZJ", "ex_name": null, "flag": "Panama", "dwt": 82800, "m3": 0, "built": "2026-07", "loa": 229, "beam": 32.26, "depth": 20.15, "shipbuilder": "Jiangsu Yangzi-Mitsui SB", "charterers": "Capital Maritime", "group_owner": "Okouchi Kaiun KK", "registered_owner": "Okouchi Kaiun KK", "ship_manager": null, "status": "On Order/Not Commenced", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 25, "company_id": 1, "company_sheet": "Okouchi Kaiun", "section": "Orderbook", "biz": null, "type": "Bulk Carrier", "imo": "1144542", "name": "JIANGSU YANGZI-MITSUI YZJ2024-1733", "ex_name": null, "flag": "Panama", "dwt": 82800, "m3": 0, "built": "2028-08", "loa": 229, "beam": 32.26, "depth": 20.15, "shipbuilder": "Jiangsu Yangzi-Mitsui SB", "charterers": null, "group_owner": "Okouchi Kaiun KK", "registered_owner": "Okouchi Kaiun KK", "ship_manager": null, "status": "On Order/Not Commenced", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 26, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9926520", "name": "FLORIDA", "ex_name": null, "flag": "Marshall Islands", "dwt": 182063, "m3": null, "built": "2022-03", "loa": 291.92, "beam": 45, "depth": 24.6, "shipbuilder": "Namura Shipbuilding - Imari", "charterers": "Bunge", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "DIANA SHIPPING SERVICES SA\t", "status": "In Service/Commission", "sale_date": "2021-12-01", "sale_price": 59500000, "note": null}, {"vessel_id": 27, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9743265", "name": "NEW ORLEANS", "ex_name": null, "flag": "Marshall Islands", "dwt": 180960, "m3": null, "built": "2015-11", "loa": 292, "beam": 45.05, "depth": 24.9, "shipbuilder": "Shanghai Waigaoqiao Shbldg", "charterers": "Diana - SwissMarine", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "DIANA SHIPPING SERVICES SA", "status": "In Service/Commission", "sale_date": "2022-08-31", "sale_price": 33200000, "note": null}, {"vessel_id": 28, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9511947", "name": "GLORY BONANZA", "ex_name": null, "flag": "Panama", "dwt": 179435, "m3": null, "built": "2010", "loa": 291.97, "beam": 45.05, "depth": 24.7, "shipbuilder": "Hyundai Heavy Industries Gunsan", "charterers": "Erasmus", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "GLORY SHIPS S PTE LTD", "status": "In Service/Commission", "sale_date": "2025-12-08", "sale_price": null, "note": null}, {"vessel_id": 29, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9621297", "name": "GLORY DEVOTION", "ex_name": null, "flag": "Singapore", "dwt": 92307, "m3": null, "built": "2013-10", "loa": 234.88, "beam": 38, "depth": 20, "shipbuilder": "Namura Shipbuilding Co Ltd", "charterers": "Erasmus - SwissMarine", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Singapore Pte Ltd", "ship_manager": "GLORY SHIPS S PTE LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 30, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9926726", "name": "GCL HAZIRA", "ex_name": null, "flag": "Marshall Islands", "dwt": 81986, "m3": null, "built": "2021-11", "loa": 228.9, "beam": 32.24, "depth": 20.2, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "Bunge", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "B&S ENTERPRISE CO LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 31, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9909039", "name": "STELLA NAVIS", "ex_name": null, "flag": "Marshall Islands", "dwt": 81965, "m3": null, "built": "2021-04", "loa": 228.9, "beam": 32.24, "depth": 20.2, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "Olam", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "B&S ENTERPRISE CO LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 32, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1070208", "name": "TOMINI PINE", "ex_name": null, "flag": "Marshall Islands", "dwt": 63684, "m3": null, "built": "2026-4", "loa": 199.9, "beam": 32.24, "depth": 19.3, "shipbuilder": "\tImabari Shipbuilding", "charterers": "Tomini Shipping", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "Daido Kaiun Co Ltd", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 33, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9902407", "name": "TYMFI", "ex_name": null, "flag": "Barbados", "dwt": 63629, "m3": null, "built": "2021-05", "loa": 199.98, "beam": 32.24, "depth": 19.3, "shipbuilder": "Tadotsu Shipyard Co Ltd", "charterers": "ADM", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "HELIKON SHIPPING ENTERPRISES", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 34, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9552329", "name": "SUPREME VALOR", "ex_name": "Kouju Lily", "flag": "Liberia", "dwt": 58872, "m3": null, "built": "2011-12", "loa": 197, "beam": 32.31, "depth": 18.1, "shipbuilder": "Kawasaki HI - Kobe - curr", "charterers": "Cargill", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "VERITAS SHIPMANAGEMENT LTD\t", "status": "In Service/Commission", "sale_date": "2022-02-03", "sale_price": 24500000, "note": null}, {"vessel_id": 35, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1042548", "name": "\tSUPER DRY", "ex_name": null, "flag": "Liberia", "dwt": 42809, "m3": null, "built": "2026-3", "loa": 183, "beam": 32.26, "depth": 15, "shipbuilder": "Oshima Shipbuilding", "charterers": "Drydel", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "DRYDEL SHIPPING INC", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 36, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1060538", "name": "TOMINI SAKURA", "ex_name": null, "flag": "Marshall Islands", "dwt": 42401, "m3": null, "built": "2025-11", "loa": 179.98, "beam": 32.26, "depth": 15.2, "shipbuilder": "Oshima Shipbuilding", "charterers": "Tomini Shipping", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "B&S ENTERPRISE CO LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 37, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1160261", "name": "BC FIDELITY", "ex_name": null, "flag": "Panama", "dwt": 40500, "m3": null, "built": "2026-3", "loa": 179.9, "beam": 30, "depth": 15.2, "shipbuilder": "Jiangmen Nanyang Ship Eng Co", "charterers": "FGM Chartering", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 38, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9941544", "name": "BC SERENITY ", "ex_name": "Seastar Harrier", "flag": "Panama", "dwt": 40393, "m3": null, "built": "2022-11", "loa": 182.94, "beam": 31.6, "depth": 14.8, "shipbuilder": "Hakodate Dock - Hakodate", "charterers": "FGM Chartering", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Singapore Pte Ltd", "ship_manager": "B&S ENTERPRISE CO LTD\t", "status": "In Service/Commission", "sale_date": "2022-11-20", "sale_price": 30900000, "note": null}, {"vessel_id": 39, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9979503", "name": "PARABOLICA", "ex_name": null, "flag": "Liberia", "dwt": 40387, "m3": null, "built": "2024-11", "loa": 179.9, "beam": 30, "depth": 15.2, "shipbuilder": "Jiangmen Nanyang Ship Eng Co", "charterers": "Transatlantica Commodities", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "FLEET MANAGEMENT LTD-HKG", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 40, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9979515", "name": "ARRABBIATA", "ex_name": null, "flag": "Liberia", "dwt": 40358, "m3": null, "built": "2025-01", "loa": 179.9, "beam": 30, "depth": 15.2, "shipbuilder": "Jiangmen Nanyang Ship Eng Co", "charterers": "Transatlantica Commodities", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "FLEET MANAGEMENT LTD-HKG", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 41, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1021295", "name": "BC LIBERTY", "ex_name": null, "flag": "Barbados", "dwt": 40354, "m3": null, "built": "2025-08", "loa": 182.94, "beam": 31.6, "depth": 14.8, "shipbuilder": "Namura Shipbuilding - Imari", "charterers": "FGM Chartering", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "STALLION MARINE SERVICES LTD\t", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 42, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1021300", "name": "BC INTEGRITY", "ex_name": null, "flag": "Barbados", "dwt": 40319, "m3": null, "built": "2025-09", "loa": 182.94, "beam": 31.6, "depth": 14.8, "shipbuilder": "Namura Shipbuilding - Imari", "charterers": "FGM Chartering", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "STALLION MARINE SERVICES LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 43, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9973535", "name": "OLIVIA", "ex_name": null, "flag": "Marshall Islands", "dwt": 40010, "m3": null, "built": "2024-06", "loa": 182.87, "beam": 31, "depth": 14.7, "shipbuilder": "Shin Kurushima Kochijyuko", "charterers": "NORDEN", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "DAIDO KAIUN CO LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 44, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9965655", "name": "BIRGIT", "ex_name": null, "flag": "Marshall Islands", "dwt": 39988, "m3": null, "built": "2024-02", "loa": 182.87, "beam": 31, "depth": 14.7, "shipbuilder": "Shin Kurushima Kochijyuko", "charterers": "MINSHIP", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "B&S ENTERPRISE CO LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 45, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9738387", "name": "ES JASMINE", "ex_name": "TS Jasmine", "flag": "Marshall Islands", "dwt": 38860, "m3": null, "built": "2018-05", "loa": 182, "beam": 30.036, "depth": 14.8, "shipbuilder": "Shanhaiguan Shipbuilding Ind", "charterers": "Erasmus", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "GLORY SHIPS S PTE LTD", "status": "In Service/Commission", "sale_date": "2021-08-04", "sale_price": 20500000, "note": null}, {"vessel_id": 46, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9908358", "name": "BC AMBITION", "ex_name": "Daido Ambition", "flag": "Panama", "dwt": 37982, "m3": null, "built": "2021-05", "loa": 179.97, "beam": 29.8, "depth": 15, "shipbuilder": "I-S Shipyard Co Ltd", "charterers": "Stallion Marine", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "STALLION MARINE SERVICES LTD\t", "status": "In Service/Commission", "sale_date": "2022-02-03", "sale_price": 33000000, "note": null}, {"vessel_id": 47, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9646728", "name": "ABYSSINIAN", "ex_name": null, "flag": "Marshall Islands", "dwt": 36064, "m3": null, "built": "2014-03", "loa": 180, "beam": 30.05, "depth": 14.7, "shipbuilder": "Jinling Shipyard", "charterers": "Ariston Navigation", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "ARISTON NAVIGATION CORP-LIB", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 48, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9655212", "name": "ABTENAUER", "ex_name": null, "flag": "Marshall Islands", "dwt": 36056, "m3": null, "built": "2014-09", "loa": 180, "beam": 30.05, "depth": 14.7, "shipbuilder": "Jinling Shipyard", "charterers": "Ariston Navigation", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "ARISTON NAVIGATION CORP-LIB", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 49, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9806732", "name": "GAS DIAMOND", "ex_name": "Joseph Wisdom", "flag": "Panama", "dwt": 6407, "m3": null, "built": "2018-06", "loa": 119.3, "beam": 18.2, "depth": 8.4, "shipbuilder": "Murakami Hide", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "EXECUTIVE SHIP MANAGEMENT", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 50, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9448841", "name": "GAS QUEST", "ex_name": "Sabrina", "flag": "Panama", "dwt": 5359, "m3": null, "built": "2009-03", "loa": 106, "beam": 17.632, "depth": 8.1, "shipbuilder": "Shitanoe Shipbuilding Co Ltd", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "WAH KWONG SHIP MANAGEMENT HK", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 51, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9977983", "name": "GAS ACE", "ex_name": null, "flag": "Panama", "dwt": 5183, "m3": null, "built": "2023-08", "loa": 99.9, "beam": 17.6, "depth": 8.1, "shipbuilder": "Shitanoe Shipbuilding Co Ltd", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "SWAN SHIPPING CORP", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 52, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9977995", "name": "GAS BLOSSOM", "ex_name": null, "flag": "Panama", "dwt": 5155, "m3": null, "built": "2023-10", "loa": 99.9, "beam": 17.6, "depth": 8.1, "shipbuilder": "Shitanoe Shipbuilding Co Ltd", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "EXECUTIVE SHIP MANAGEMENT", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 53, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9353981", "name": "GAS STAR", "ex_name": "Epic St. Vincent", "flag": "Panama", "dwt": 5023, "m3": null, "built": "2008-01", "loa": 99.98, "beam": 17.22, "depth": 7.8, "shipbuilder": "Sasaki Shbldg - Osakikamijima", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "EXECUTIVE SHIP MANAGEMENT\t", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 54, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "LPG Tanker", "imo": "9698290", "name": "GAS RESPECT", "ex_name": "Epic Caledonia", "flag": "Panama", "dwt": 3718, "m3": null, "built": "2014-08", "loa": 95, "beam": 15.96, "depth": 7.1, "shipbuilder": "Kitanihon", "charterers": "Erasmus Gas Carriers Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "EXECUTIVE SHIP MANAGEMENT", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 55, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9926219", "name": "CMA CGM ETOSHA", "ex_name": null, "flag": "Portugal (Mar)", "dwt": 75624, "m3": null, "built": "2024-08", "loa": 240.049, "beam": 42.8, "depth": 22.1, "shipbuilder": "Qingdao Yangfan Shipbuilding", "charterers": "Delphis NV", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "ANGLO-EASTERN SHIP MANAGEMENT", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 56, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9959046", "name": "ASL QINGDAO", "ex_name": null, "flag": "Liberia", "dwt": 24516, "m3": null, "built": "2024-01", "loa": 172, "beam": 28.4, "depth": 14.5, "shipbuilder": "Huanghai Shipbuilding Co Ltd", "charterers": "Asean Seas Line Co Ltd", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "SHANGHAI ASL SHIPMANAGEMENT CO", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 57, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9963724", "name": "ASL HAIPHONG", "ex_name": null, "flag": "Liberia", "dwt": 24513, "m3": null, "built": "2024-04", "loa": 171.9, "beam": 28.4, "depth": 14.5, "shipbuilder": "Huanghai Shipbuilding Co Ltd", "charterers": "Emirates Shipping Line DMCEST", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "SHANGHAI ASL SHIPMANAGEMENT CO", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 58, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9309150", "name": "ERASMUS ICON", "ex_name": "Asian Ace", "flag": "Panama", "dwt": 23395, "m3": null, "built": "2005-05", "loa": 175.52, "beam": 27.4, "depth": 14.3, "shipbuilder": "Guangzhou Wenchong Shipyard Co", "charterers": "Erasmus Corp", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "AMANN SHIP MANAGEMENT LTD", "status": "In Service/Commission", "sale_date": "2025-01-27", "sale_price": 9500000, "note": null}, {"vessel_id": 59, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9516777", "name": "ANL MOUNT WILHELM", "ex_name": "Ela", "flag": "Singapore", "dwt": 23373, "m3": null, "built": "2012-04", "loa": 175.49, "beam": 27.4, "depth": 14.3, "shipbuilder": "Guangzhou Wenchong Shipyard Co", "charterers": "CMA CGM SA The French Line", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Singapore Pte Ltd", "ship_manager": "AMANN SHIP MANAGEMENT LTD", "status": "In Service/Commission", "sale_date": "2025-05-19", "sale_price": 22500000, "note": null}, {"vessel_id": 60, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9626558", "name": "ERASMUS GOAL", "ex_name": "Kestrel", "flag": "Singapore", "dwt": 22071, "m3": null, "built": "2013-05", "loa": 172.1, "beam": 27.3, "depth": 13.7, "shipbuilder": "CSBC Corp Taiwan - Keelung", "charterers": "Erasmus Corp", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Singapore Pte Ltd", "ship_manager": "\tAMANN SHIP MANAGEMENT LTD", "status": "In Service/Commission", "sale_date": "2025-05-19", "sale_price": 22500000, "note": null}, {"vessel_id": 61, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9396634", "name": "ERASMUS HOPE", "ex_name": "Evi", "flag": "Panama", "dwt": 17350, "m3": null, "built": "2008-09", "loa": 161.3, "beam": 25, "depth": 14.9, "shipbuilder": "Jiangsu Yangzijiang Shbldg Co", "charterers": "Erasmus Corp", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "ERASMUS CORP", "status": "In Service/Commission", "sale_date": "2025-02-21", "sale_price": 12700000, "note": null}, {"vessel_id": 62, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "1032452", "name": "ERASMUS EFFORT", "ex_name": null, "flag": "Panama", "dwt": 11817, "m3": null, "built": "2025-07", "loa": 141.9, "beam": 22.5, "depth": 11.4, "shipbuilder": "Kyokuyo Shipyard Corp", "charterers": "Maersk A/S", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "GLORY SHIPS S PTE LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 63, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "TC", "type": "General Cargo Ship", "imo": "1034498", "name": "OCEAN ECHO", "ex_name": null, "flag": "Panama", "dwt": 13646, "m3": null, "built": "2025-05", "loa": 119.6, "beam": 21.7, "depth": 14.1, "shipbuilder": "Higaki", "charterers": "NYK Line", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "GLORY SHIPS S PTE LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 64, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Bunkering Tanker", "imo": "9825049", "name": "MARINE TERRACE", "ex_name": null, "flag": "Singapore", "dwt": 7997, "m3": null, "built": "2018", "loa": null, "beam": null, "depth": null, "shipbuilder": null, "charterers": "Erasmus Corp", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Singapore Pte Ltd", "ship_manager": "OHC SHIPMANAGEMENT PTE LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 65, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "Sold", "biz": "Bulk Carrier", "type": "Bulk Carrier", "imo": "9851359", "name": "BC PISTI", "ex_name": "Integrity Daido", "flag": "Panama", "dwt": 39287, "m3": null, "built": "2019-03", "loa": null, "beam": null, "depth": null, "shipbuilder": "Shin Kurushima Toyohashi", "charterers": "FGM Chartering", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "STALLION MARINE SERVICES LTD", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 66, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "Sold", "biz": "Chemical/Products Tanker", "type": "Chemical/Products Tanker", "imo": "9829679", "name": "SUNRISE RAY", "ex_name": "BW Radon", "flag": "Liberia", "dwt": 19976, "m3": null, "built": "2018-06", "loa": null, "beam": null, "depth": null, "shipbuilder": "Fukuoka Shipbuilding - Fukuoka", "charterers": "Ace Quantum Chemical Tankers", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "ANGLO-EASTERN SHIPMANAGEMENT S", "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 67, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "Sold", "biz": "Container Ship (Fully Cellular)", "type": "Container Ship (Fully Cellular)", "imo": "9449833", "name": "ERASMUS MASTER", "ex_name": null, "flag": "Panama", "dwt": 21146, "m3": null, "built": "2009", "loa": 180.36, "beam": 25, "depth": 14.2, "shipbuilder": "Zhejiang Ouhua Shipbuilding", "charterers": "Erasmus Corp", "group_owner": "Daido Kaiun Co Ltd", "registered_owner": "Fair Wind Marshall SA", "ship_manager": "MSC SHIPMANAGEMENT LTD", "status": "In Service/Commission", "sale_date": "2025-09-30", "sale_price": null, "note": null}, {"vessel_id": 68, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "Orderbook", "biz": "Bulk Carrier", "type": "Bulk Carrier", "imo": null, "name": null, "ex_name": null, "flag": null, "dwt": 40000, "m3": null, "built": "2029", "loa": null, "beam": null, "depth": null, "shipbuilder": "Shin Kurushima Kochijyuko", "charterers": null, "group_owner": "Daido Kaiun Co Ltd", "registered_owner": null, "ship_manager": null, "status": null, "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 69, "company_id": 3, "company_sheet": "Daido Kaiun", "section": "Orderbook", "biz": "Bulk Carrier", "type": "Bulk Carrier", "imo": null, "name": null, "ex_name": null, "flag": null, "dwt": 64000, "m3": null, "built": "2029", "loa": null, "beam": null, "depth": null, "shipbuilder": "Jiangsu New Dayang ", "charterers": null, "group_owner": "Daido Kaiun Co Ltd", "registered_owner": null, "ship_manager": null, "status": null, "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 70, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Bulk Carrier", "imo": "9860960", "name": "MOUNT ALBERTA", "ex_name": "Mp The Hightower", "flag": "Liberia", "dwt": 209191, "m3": null, "built": "2020-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "Jiangsu Newyangzi Shipbuilding", "charterers": "Eastern Pacific Shipping Pte", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2021-11-17", "sale_price": 65000000, "note": null}, {"vessel_id": 71, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9782302", "name": "CAPE TAWEELAH", "ex_name": null, "flag": "Marshall Islands", "dwt": 183123, "m3": null, "built": "2017-02", "loa": null, "beam": null, "depth": null, "shipbuilder": "Imabari Shbldg - Hiroshima", "charterers": "K-Line", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 72, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9623702", "name": "AOM GAIA", "ex_name": null, "flag": "Malta", "dwt": 82009, "m3": null, "built": "2014-06", "loa": null, "beam": null, "depth": null, "shipbuilder": "Tsuneishi Heavy Inds Cebu", "charterers": "Augustea Oceanbulk Maritime", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 73, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9951977", "name": "SANTA ACE", "ex_name": null, "flag": "Marshall Islands", "dwt": 63725, "m3": null, "built": "2022-11", "loa": null, "beam": null, "depth": null, "shipbuilder": "Minaminippon Shbldg - Ozai", "charterers": "Swire Bulk", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 74, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1024467", "name": "ULTRA CONFIDENCE", "ex_name": null, "flag": "Marshall Islands", "dwt": 63710, "m3": null, "built": "2025-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "Minaminippon Shbldg - Ozai", "charterers": "Ultrabulk A/S", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 75, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9951989", "name": "BELMONDO", "ex_name": null, "flag": "Norway (Nis)", "dwt": 63705, "m3": null, "built": "2023-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "Minaminippon Shbldg - Ozai", "charterers": "Lighthouse Maritime Ltd", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 76, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9916238", "name": "BELTOKYO", "ex_name": "Resilience", "flag": "Norway (Nis)", "dwt": 63626, "m3": null, "built": "2021-12", "loa": null, "beam": null, "depth": null, "shipbuilder": "Shin Kasado Dockyard Co Ltd", "charterers": "Lighthouse Maritime Ltd", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 77, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "1042885", "name": "AVERY POINT", "ex_name": null, "flag": "Singapore", "dwt": 63500, "m3": null, "built": "2025-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "Jiangsu Hantong WING HI", "charterers": "Asiatic Lloyd Maritime LLP", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 78, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9866615", "name": "FEDERAL INNOKO", "ex_name": null, "flag": "Marshall Islands", "dwt": 63480, "m3": null, "built": "2020-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "I-S Shipyard Co Ltd", "charterers": "Fednav International Ltd", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 79, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9642136", "name": "DIAMOND QUEEN", "ex_name": null, "flag": "Panama", "dwt": 61414, "m3": null, "built": "2013-02", "loa": null, "beam": null, "depth": null, "shipbuilder": "Shin Kasado Dockyard Co Ltd", "charterers": "Toei Japan Ltd", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 80, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9691620", "name": "WEST TREASURE", "ex_name": null, "flag": "Panama", "dwt": 61292, "m3": null, "built": "2014-06", "loa": null, "beam": null, "depth": null, "shipbuilder": "Iwagi Zosen Co Ltd", "charterers": "WAH KWONG", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2020-10-22", "sale_price": 15000000, "note": null}, {"vessel_id": 81, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9675559", "name": "GARDENIA K", "ex_name": null, "flag": "Marshall Islands", "dwt": 38067, "m3": null, "built": "2014-02", "loa": null, "beam": null, "depth": null, "shipbuilder": "Imabari Shbldg - Imabari", "charterers": "Oldendorff", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 82, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "TC", "type": "Bulk Carrier", "imo": "9811919", "name": "ISHIZUCHI STAR", "ex_name": null, "flag": "Marshall Islands", "dwt": 37637, "m3": null, "built": "2017-08", "loa": null, "beam": null, "depth": null, "shipbuilder": "I-S Shipyard Co Ltd", "charterers": "Pacific Basin", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 83, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Chemical/Products Tanker", "imo": "9829722", "name": "MAGENTA RAY", "ex_name": "Stream Atlantic", "flag": "Liberia", "dwt": 19998, "m3": null, "built": "2019-01", "loa": null, "beam": null, "depth": null, "shipbuilder": "Fukuoka Shipbuilding - Fukuoka", "charterers": "Ace Quantum Chemical Tankers", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": "2023-03-17", "sale_price": 34000000, "note": null}, {"vessel_id": 84, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "In Fleet", "biz": "BBC", "type": "Container Ship (Fully Cellular)", "imo": "9984340", "name": "TOROGOZ", "ex_name": null, "flag": "Liberia", "dwt": 21257, "m3": null, "built": "2025-06", "loa": null, "beam": null, "depth": null, "shipbuilder": "HD Hyundai Mipo Co Ltd", "charterers": "Crowley Liner Services Inc", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 85, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "Sold", "biz": "TC", "type": "Bulk Carrier", "imo": "9448217", "name": "ULTRA COLONSAY", "ex_name": "U-Sea Colonsay", "flag": "Panama", "dwt": 61470, "m3": null, "built": "2011-10", "loa": null, "beam": null, "depth": null, "shipbuilder": "Shin Kasado Dockyard Co Ltd", "charterers": "Ultrabulk A/S", "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 86, "company_id": 2, "company_sheet": "Taiyo Kaiun", "section": "Sold", "biz": "TC", "type": "Wood Chips Carrier", "imo": "9342748", "name": "OPERA WHITE", "ex_name": null, "flag": "Japan", "dwt": 53710, "m3": null, "built": "2007-10", "loa": null, "beam": null, "depth": null, "shipbuilder": "Sanoyas Hishino Meisho Corp", "charterers": null, "group_owner": "Taiyo Kaiun Kaisha Ltd", "registered_owner": "Seavance Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 87, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1041544", "name": "SUMMER QUEEN", "ex_name": null, "flag": "Panama", "dwt": 64190, "m3": null, "built": "2025-05", "loa": 199.9, "beam": 32.24, "depth": 19.4, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "Bunge", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 88, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9966087", "name": "LOWLANDS FIDELITY", "ex_name": null, "flag": "Panama", "dwt": 64028, "m3": null, "built": "2023-06", "loa": 199.9, "beam": 32.24, "depth": 19.4, "shipbuilder": "Nantong COSCO KHI Ship Eng", "charterers": "Cobelfred", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 89, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1103275", "name": "LANGLOIS SKIATHOS", "ex_name": null, "flag": "Marshall Islands", "dwt": 63716, "m3": null, "built": "2026-04", "loa": 199.9, "beam": 32.24, "depth": 19.3, "shipbuilder": "Iwagi Zosen Co Ltd", "charterers": "Langlois", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 90, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9890862", "name": "ROMY", "ex_name": null, "flag": "Marshall Islands", "dwt": 37897, "m3": null, "built": "2020-11", "loa": 179.97, "beam": 29.8, "depth": 15, "shipbuilder": "Shimanami Shipyard Co Ltd", "charterers": "Berge Bulk Maritime Pte Ltd", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 91, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9874985", "name": "BERGE SCAFELL PIKE", "ex_name": null, "flag": "Panama", "dwt": 37687, "m3": null, "built": "2020-03", "loa": 179.97, "beam": 29.8, "depth": 15, "shipbuilder": "Shimanami Shipyard Co Ltd", "charterers": "Berge Bulk Maritime Pte Ltd", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 92, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "LPG Carrier", "imo": "9707194", "name": "GAS VICTORY", "ex_name": null, "flag": "Portugal (MAR)", "dwt": 5169, "m3": null, "built": "2015-03", "loa": 99.98, "beam": 17.8, "depth": 8, "shipbuilder": "Kitanihon Shipbuilding Co Ltd", "charterers": "ERASMUS", "group_owner": "Tachibana Kaiun YK", "registered_owner": "SAKAE SHIPPING SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 93, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "In Fleet", "biz": null, "type": "RoRo", "imo": "8980579", "name": "NIKKO", "ex_name": null, "flag": "Japan", "dwt": 2349, "m3": null, "built": "2003-04", "loa": 93.5, "beam": 14.3, "depth": 9, "shipbuilder": "Yamanaka Zosen KK", "charterers": null, "group_owner": "Tachibana Kaiun YK", "registered_owner": "Nippo Shosen YK", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 94, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "Orderbook", "biz": null, "type": "Bulk Carrier", "imo": "TBN", "name": "TBN", "ex_name": null, "flag": null, "dwt": 40000, "m3": null, "built": "2026-11", "loa": null, "beam": null, "depth": null, "shipbuilder": "JNS", "charterers": "Swire", "group_owner": null, "registered_owner": null, "ship_manager": null, "status": null, "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 95, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "Orderbook", "biz": null, "type": "Bulk Carrier", "imo": "TBN", "name": "TBN", "ex_name": null, "flag": null, "dwt": 42000, "m3": null, "built": "2029", "loa": null, "beam": null, "depth": null, "shipbuilder": "Oshima", "charterers": "Latsco", "group_owner": null, "registered_owner": null, "ship_manager": null, "status": null, "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 96, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "Orderbook", "biz": null, "type": "Bulk Carrier", "imo": "TBN", "name": "TBN", "ex_name": null, "flag": null, "dwt": 64000, "m3": null, "built": "2030", "loa": null, "beam": null, "depth": null, "shipbuilder": "Oshima", "charterers": "M/Maritime", "group_owner": null, "registered_owner": null, "ship_manager": null, "status": null, "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 97, "company_id": 4, "company_sheet": "Tachibana Kaiun", "section": "Sold", "biz": null, "type": "Bulk Carrier", "imo": "9852913", "name": "MARKET PORTER", "ex_name": null, "flag": null, "dwt": null, "m3": null, "built": null, "loa": null, "beam": null, "depth": null, "shipbuilder": null, "charterers": null, "group_owner": null, "registered_owner": null, "ship_manager": null, "status": "On Order", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 98, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9882322", "name": "GIRASOLE RIVER", "ex_name": null, "flag": "Panama", "dwt": 81982, "m3": null, "built": "2020-08", "loa": 228.9, "beam": 32.24, "depth": 14.523, "shipbuilder": "Dalian Cosco Khi Ship Engineering Co Ltd", "charterers": "ADM", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 99, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9952907", "name": "ETG UBUNTU", "ex_name": null, "flag": "Panama", "dwt": 64195, "m3": null, "built": "2022-08", "loa": 199.9, "beam": 32.24, "depth": 13.525, "shipbuilder": "Nantong Cosco Khi Ship Engineering", "charterers": "ETG", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 100, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "1036513", "name": "QUEEN RIVER", "ex_name": null, "flag": "Panama", "dwt": 64183, "m3": null, "built": "2025-04", "loa": 199.9, "beam": 32.24, "depth": 13.525, "shipbuilder": "Nantong Cosco Khi Ship Engineering", "charterers": "BUNGE", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Yaegawa Kaiun KK & Eight River", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 101, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9914498", "name": "NORD ALLEGRO", "ex_name": null, "flag": "Panama", "dwt": 61263, "m3": null, "built": "2022-01", "loa": 199.9, "beam": 32.24, "depth": 13, "shipbuilder": "Nantong Cosco Khi Ship Engineering", "charterers": "NORDEN", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": "PO will be exercised on 2027"}, {"vessel_id": 102, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "9942213", "name": "VORTEX RIVER", "ex_name": null, "flag": "Panama", "dwt": 58351, "m3": null, "built": "2023-06", "loa": 189.99, "beam": 32.26, "depth": 13.07, "shipbuilder": "Oshima Shipbuilding Co Ltd", "charterers": "NYK", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 103, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Bulk Carrier", "imo": "TBN", "name": "TBN", "ex_name": null, "flag": null, "dwt": 58000, "m3": null, "built": "2028", "loa": null, "beam": null, "depth": null, "shipbuilder": "Oshima Shipbuilding Co Ltd", "charterers": "NYK", "group_owner": "Yaegawa Kaiun KK", "registered_owner": null, "ship_manager": null, "status": "On order", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 104, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "General Cargo Ship (Open Hatch)", "imo": "9799769", "name": "INDIGO RIVER", "ex_name": null, "flag": "Panama", "dwt": 55683, "m3": null, "built": "2018-03", "loa": 189.99, "beam": 32.26, "depth": 12.568, "shipbuilder": "Oshima Shipbuilding Co Ltd", "charterers": "NYK", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 105, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Chemical/Products Tanker", "imo": "9692155", "name": "GOUSEA", "ex_name": null, "flag": "Marshall Islands", "dwt": 49573, "m3": null, "built": "2015-09", "loa": 183, "beam": 32.2, "depth": 13.315, "shipbuilder": "K Shipbuilding Co Ltd", "charterers": "VITOL INTERNATIONAL", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Yaegawa Kaiun KK & Eight River", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 106, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Chemical/Products Tanker", "imo": "9956939", "name": "TRANS FJORD", "ex_name": null, "flag": "Panama", "dwt": 12577, "m3": null, "built": "2023-12", "loa": 126, "beam": 20.5, "depth": 8.813, "shipbuilder": "Kitanihon Shipbuilding Co Ltd", "charterers": "Seatrans Chemical ", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 107, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Products Tanker", "imo": "9327762", "name": "AI MARU", "ex_name": null, "flag": "Japan", "dwt": 4999, "m3": null, "built": "2004-11", "loa": 104.83, "beam": 16, "depth": 6.264, "shipbuilder": "Miura Zosensho, K.K.", "charterers": "UYENO Trans", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Yaegawa Kaiun KK", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 108, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "In Fleet", "biz": null, "type": "Limestone Carrier", "imo": "9185475", "name": "HOKUYO MARU", "ex_name": null, "flag": "Japan", "dwt": 10750, "m3": null, "built": "1998-08", "loa": 119.5, "beam": 20.4, "depth": 7.518, "shipbuilder": "Tsuneishi Heavy Industries (Cebu) Inc", "charterers": "JFE", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Yaegawa Kaiun KK", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": null}, {"vessel_id": 109, "company_id": 10, "company_sheet": "Yaegawa Kaiun", "section": "Sold", "biz": null, "type": "Bulk Carrier", "imo": "9708978", "name": "EGRET RIVER", "ex_name": null, "flag": "Panama", "dwt": 64012, "m3": null, "built": "2017-10", "loa": 199.9, "beam": 32.26, "depth": 13.325, "shipbuilder": "Tsuneishi Heavy Industries (Cebu) Inc", "charterers": "Pacific Basin", "group_owner": "Yaegawa Kaiun KK", "registered_owner": "Eight River Shipping SA", "ship_manager": null, "status": "In Service/Commission", "sale_date": null, "sale_price": null, "note": "PO Excercised on 2025/12"}];
+
+</script>
+<script>
+
+// ---------- state ----------
+let companies = [];
+let vessels = [];
+let meetings = [];
+let view = 'companies'; // companies | vessels | meetings | import
+let searchQ = '';
+let areaFilter = '';
+let vesselSearchQ = '';
+let vesselTypeFilter = '';
+let vesselSectionFilter = '';
+let vesselCompanyFilter = '';
+let sortCol = 'name';
+let sortDir = 1;
+let activeCompanyId = null;
+let drawerTab = 'info';
+let editingCompany = null; // company object being edited (draft), or null
+let editingVessel = null;
+let editingMeeting = null;
+let pendingDelete = null; // {type, id}
+let meetingSearchQ = '';
+let meetingCompanyFilter = '';
+
+// import wizard state
+let importStep = 1; // 1: choose type+source, 2: map columns, 3: preview/confirm
+let importTargetType = 'vessels'; // 'companies' | 'vessels' | 'meetings'
+let importRawRows = []; // array of arrays (raw parsed grid, row0 = header guess)
+let importHeaderRowIndex = 0;
+let importColumnMap = {}; // targetField -> sourceColumnIndex (-1 = unmapped)
+let importVesselCompanyId = null; // which company new vessels attach to (when importing vessels for one company)
+let importResults = null; // {added, skipped, errors}
+
+const FIELD_LABELS_C = {
+  area:'エリア', name:'会社名', name_en:'会社名（英語）', ceo:'代表者', pic:'担当者', address:'住所', tel:'電話番号',
+  mail:'メール', website:'ウェブサイト', registered_owner:'登録船主名', related_company:'関連会社', banks:'取引銀行',
+  broker:'ブローカー', type_of_vessel:'船種', shipyard:'造船所', tc_fleet:'TC船',
+  bbc_fleet:'BBC船', tc_charterer:'TC傭船者', bbc_charterer:'BBC傭船者', newbuilding:'新造船(NB)'
+};
+const FIELD_ORDER_C = ['area','name','name_en','ceo','pic','address','tel','mail','website','registered_owner',
+  'related_company','banks','broker','type_of_vessel','shipyard','tc_fleet','bbc_fleet',
+  'tc_charterer','bbc_charterer','newbuilding'];
+
+const FIELD_LABELS_V = {
+  type:'船種', imo:'IMO番号', name:'船名', ex_name:'旧船名', flag:'旗国', dwt:'DWT',
+  m3:'M3', built:'建造年月', loa:'LOA', beam:'BEAM', depth:'DEPTH/DRAFT', shipbuilder:'造船所',
+  charterers:'傭船者', group_owner:'グループオーナー', registered_owner:'登録船主',
+  ship_manager:'船舶管理会社', status:'ステータス', sale_date:'売却日', sale_price:'売却価格',
+  note:'備考', biz:'BIZ', section:'区分'
+};
+const FIELD_ORDER_V = ['section','biz','type','imo','name','ex_name','flag','dwt','m3','built',
+  'loa','beam','depth','shipbuilder','charterers','group_owner','registered_owner',
+  'ship_manager','status','sale_date','sale_price','note'];
+
+const FIELD_LABELS_M = {
+  date:'日付', attendees:'出席者', category:'カテゴリ', summary:'話した内容',
+  next_action:'次のアクション'
+};
+const FIELD_ORDER_M = ['date','attendees','category','summary','next_action'];
+
+// fields offered in the import mapping step (company_id/sheet handled separately for vessels)
+const IMPORT_FIELDS_COMPANY = FIELD_ORDER_C;
+const IMPORT_FIELDS_VESSEL = FIELD_ORDER_V.filter(f=>f!=='section');
+const IMPORT_FIELDS_MEETING = FIELD_ORDER_M;
+
+// simple heuristics to auto-guess column mapping from header text
+const HEADER_HINTS_COMPANY = {
+  area:['area','エリア','地域'], name:['name','会社名','社名','company'],
+  name_en:['name (en)','name_en','english name','english','会社名（英語）','英語社名','英語名'],
+  ceo:['ceo','代表','社長'],
+  pic:['pic','担当'], address:['address','住所'], tel:['tel','電話'], mail:['mail','メール','email'],
+  website:['website','url','hp','ホームページ','web site'],
+  registered_owner:['registered owner','登録船主'], related_company:['related','関連会社'],
+  banks:['bank','銀行'], broker:['broker','ブローカー'], type_of_vessel:['type of vessel','船種'],
+  shipyard:['shipyard','造船所'], tc_fleet:['tc','tc船'], bbc_fleet:['bbc','bbc船'],
+  tc_charterer:['tc charterer','tc傭船'], bbc_charterer:['bbc charterer','bbc傭船'],
+  newbuilding:['nb','newbuild','新造']
+};
+const HEADER_HINTS_VESSEL = {
+  biz:['biz'], type:['type','船種'], imo:['imo'], name:['name','船名'], ex_name:['ex name','旧船名'],
+  flag:['flag','旗国'], dwt:['dwt'], m3:['m3','m³'], built:['built','建造'], loa:['loa'],
+  beam:['beam'], depth:['depth','draft','draught'], shipbuilder:['shipbuilder','builder','造船所'],
+  charterers:['charterer','傭船'], group_owner:['group owner','グループオーナー'],
+  registered_owner:['registered owner','登録船主'], ship_manager:['ship manager','technical manager','船舶管理'],
+  status:['status','ステータス'], sale_date:['sale date','売却日'], sale_price:['sale price','売却価格'],
+  note:['note','備考']
+};
+const HEADER_HINTS_MEETING = {
+  date:['date','日付','日時'], attendees:['attendance','attendee','出席'], category:['category','カテゴリ','種別'],
+  summary:['summary','memo','note','内容','メモ','others','その他'], next_action:['next step','next action','次のアクション','todo']
+};
+
+function resetImportWizard(){
+  importStep = 1;
+  importTargetType = 'vessels';
+  importRawRows = [];
+  importHeaderRowIndex = 0;
+  importColumnMap = {};
+  importVesselCompanyId = companies[0] ? companies[0].company_id : null;
+  importResults = null;
+}
+
+function guessColumnMap(headers, hints){
+  const map = {};
+  Object.keys(hints).forEach(field=>{
+    let found = -1;
+    for(let i=0;i<headers.length;i++){
+      const h = (headers[i]||'').toString().toLowerCase().trim();
+      if(!h) continue;
+      if(hints[field].some(hint=>h.includes(hint))){ found = i; break; }
+    }
+    map[field] = found;
+  });
+  return map;
+}
+
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_tNILpyY5pfs1ls9zheriIAylf_yDNDnfQC6wcYkXWf6ifvKDi-m3V20gC8za6aP81w/exec';
+let _saveTimer = null;
+
+// ---------- storage (Google Sheets) ----------
+async function loadData(){
+  try{
+    showLoadingOverlay('データを読み込み中...');
+    const res = await fetch(GAS_URL + '?action=load');
+    const json = await res.json();
+    if(json.ok && json.data){
+      companies = json.data.companies && json.data.companies.length > 0 ? json.data.companies : SEED_COMPANIES.slice();
+      vessels = json.data.vessels && json.data.vessels.length > 0 ? json.data.vessels : SEED_VESSELS.slice();
+      meetings = json.data.meetings && json.data.meetings.length > 0 ? json.data.meetings : [];
+    } else {
+      companies = SEED_COMPANIES.slice();
+      vessels = SEED_VESSELS.slice();
+      meetings = [];
+    }
+  }catch(e){
+    console.error('load error:', e);
+    companies = SEED_COMPANIES.slice();
+    vessels = SEED_VESSELS.slice();
+    meetings = [];
+  } finally {
+    hideLoadingOverlay();
+  }
+}
+
+async function _saveAll(){
+  try{
+    await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({companies, vessels, meetings})
+    });
+  }catch(e){ console.error('save error:', e); }
+}
+
+function scheduleSave(){
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(_saveAll, 1500);
+}
+
+async function saveCompanies(){ scheduleSave(); }
+async function saveVessels(){ scheduleSave(); }
+async function saveMeetings(){ scheduleSave(); }
+
+function showLoadingOverlay(msg){
+  let el = document.getElementById('_loadOverlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = '_loadOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,96,0.7);display:flex;align-items:center;justify-content:center;z-index:999;color:#fff;font-size:15px;font-family:sans-serif;gap:12px;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div style="width:20px;height:20px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>' + msg;
+  el.style.display = 'flex';
+}
+function hideLoadingOverlay(){
+  const el = document.getElementById('_loadOverlay');
+  if(el) el.style.display = 'none';
+}
+
+// ---------- import parsing ----------
+function parsePastedText(text){
+  // tab-separated (from Excel copy) or comma-separated fallback
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.length>0);
+  const delim = lines[0] && lines[0].includes('\t') ? '\t' : ',';
+  return lines.map(l=>l.split(delim));
+}
+
+function parseWorkbookFile(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheetName = wb.SheetNames[0];
+        const sheet = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false});
+        resolve(rows.map(r=>r.map(c=>c===null||c===undefined?'':String(c))));
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function detectHeaderRow(rows){
+  // pick the first row with at least 2 non-empty cells as a best guess
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const nonEmpty = rows[i].filter(c=>(c||'').toString().trim()!=='').length;
+    if(nonEmpty>=2) return i;
+  }
+  return 0;
+}
+
+// ---------- helpers ----------
+function esc(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function nl2br(s){ return esc(s).replace(/\n/g,'<br>'); }
+function normalizeUrl(u){
+  if(!u) return null;
+  const trimmed = u.toString().trim();
+  if(!trimmed) return null;
+  if(/^https?:\/\//i.test(trimmed)) return trimmed;
+  return 'https://' + trimmed;
+}
+function fmtNum(n){
+  if(n===null||n===undefined||n==='') return '';
+  const num = Number(n);
+  if(isNaN(num)) return esc(n);
+  return num.toLocaleString('en-US');
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function nextId(arr, key){
+  return arr.length ? Math.max(...arr.map(x=>x[key]||0)) + 1 : 1;
+}
+function companyVessels(cid){
+  return vessels.filter(v=>v.company_id===cid);
+}
+function companyMeetings(cid){
+  return meetings.filter(m=>m.company_id===cid).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+}
+function fmtDate(d){
+  if(!d) return '';
+  return d;
+}
+function sectionBadge(section){
+  if(section==='In Fleet') return '<span class="badge badge-fleet">保有</span>';
+  if(section==='Orderbook') return '<span class="badge badge-order">建造中</span>';
+  if(section==='Sold') return '<span class="badge badge-sold">売却済</span>';
+  return '';
+}
+function uniqueAreas(){
+  return [...new Set(companies.map(c=>c.area).filter(Boolean))];
+}
+function uniqueVesselTypes(){
+  return [...new Set(vessels.map(v=>v.type).filter(Boolean))].sort();
+}
+
+// ---------- render root ----------
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderTopbar()}
+    <main>
+      ${view==='companies' ? renderCompaniesView() : view==='vessels' ? renderVesselsView() : view==='meetings' ? renderMeetingsView() : renderImportView()}
+    </main>
+  `;
+  attachGlobalHandlers();
+}
+
+function renderTopbar(){
+  return `
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 11h16l-1.8 6.2a2 2 0 0 1-1.92 1.43H7.72a2 2 0 0 1-1.92-1.43L4 11Z" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11V6.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1V11" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 5.5V3.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M2.5 20.5c1.3-1.2 2.6-1.2 3.9 0s2.6 1.2 3.9 0 2.6-1.2 3.9 0 2.6 1.2 3.9 0 2.6-1.2 3.9 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/></svg></div>
+      <div class="brand-text">
+        <h1>船主データベース</h1>
+        <p>会社 ${companies.length}件 ・ 船舶 ${vessels.length}件 ・ 面談 ${meetings.length}件</p>
+      </div>
+    </div>
+    <div class="topnav">
+      <button data-nav="companies" class="${view==='companies'?'active':''}">会社一覧</button>
+      <button data-nav="vessels" class="${view==='vessels'?'active':''}">船舶一覧</button>
+      <button data-nav="meetings" class="${view==='meetings'?'active':''}">面談記録</button>
+      <button data-nav="import" class="${view==='import'?'active':''}">インポート</button>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="exportBtn" title="JSONエクスポート"><i class="ti ti-download"></i>⤓</button>
+    </div>
+  </div>`;
+}
+
+// ---------- companies view ----------
+function filteredCompanies(){
+  let list = companies.slice();
+  if(areaFilter) list = list.filter(c=>c.area===areaFilter);
+  if(searchQ){
+    const q = searchQ.toLowerCase();
+    list = list.filter(c=>{
+      return FIELD_ORDER_C.some(f=>(c[f]||'').toString().toLowerCase().includes(q));
+    });
+  }
+  list.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'ja'));
+  return list;
+}
+
+function renderCompaniesView(){
+  const list = filteredCompanies();
+  const areas = uniqueAreas();
+  return `
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon"><i class="ti ti-search"></i>🔍</span>
+        <input type="text" id="companySearch" placeholder="会社名・代表者・住所・銀行などで検索" value="${esc(searchQ)}">
+      </div>
+      <select id="areaFilter">
+        <option value="">すべてのエリア</option>
+        ${areas.map(a=>`<option value="${esc(a)}" ${a===areaFilter?'selected':''}>${esc(a)}</option>`).join('')}
+      </select>
+      <div class="spacer"></div>
+      <span class="count-pill">${list.length} 件表示</span>
+      <button class="btn btn-accent" id="addCompanyBtn">+ 会社を追加</button>
+    </div>
+    ${list.length===0 ? renderEmpty('該当する会社がありません', '検索条件を変更するか、新しい会社を追加してください') : `
+    <div class="company-grid">
+      ${list.map(c=>renderCompanyCard(c)).join('')}
+    </div>`}
+  `;
+}
+
+function renderCompanyCard(c){
+  const vCount = companyVessels(c.company_id).length;
+  const fleetCount = companyVessels(c.company_id).filter(v=>v.section==='In Fleet').length;
+  const orderCount = companyVessels(c.company_id).filter(v=>v.section==='Orderbook').length;
+  const mList = companyMeetings(c.company_id);
+  const lastMeeting = mList[0];
+  const websiteUrl = normalizeUrl(c.website);
+  return `
+  <div class="ccard" data-company="${c.company_id}">
+    <div class="ccard-top">
+      <div style="min-width:0;">
+        <p class="ccard-name">${esc(c.name)}</p>
+        ${c.name_en ? `<p class="ccard-name-en">${esc(c.name_en)}</p>` : ''}
+        <p class="ccard-ceo">${c.ceo ? '代表: '+esc(c.ceo) : ''}</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
+        <span class="ccard-area">${esc(c.area||'-')}</span>
+        ${websiteUrl ? `<button class="ccard-web-btn" data-website-url="${esc(websiteUrl)}" title="ウェブサイトを開く" aria-label="ウェブサイトを開く">🌐</button>` : ''}
+      </div>
+    </div>
+    <div class="ccard-meta">
+      ${c.tel ? `<div class="ccard-row"><span class="ico">☎</span><span>${esc(c.tel)}</span></div>` : ''}
+      ${c.mail ? `<div class="ccard-row"><span class="ico">✉</span><span>${esc(c.mail)}</span></div>` : ''}
+      ${c.broker ? `<div class="ccard-row"><span class="ico">🤝</span><span>${esc(c.broker)}</span></div>` : ''}
+      ${lastMeeting ? `<div class="ccard-row"><span class="ico">💬</span><span>直近面談: ${esc(lastMeeting.date||'-')}</span></div>` : ''}
+    </div>
+    ${(vCount>0 || mList.length>0) ? `
+    <div class="ccard-stats">
+      ${fleetCount>0 ? `<span class="stat-chip">保有 ${fleetCount}隻</span>`:''}
+      ${orderCount>0 ? `<span class="stat-chip">建造中 ${orderCount}隻</span>`:''}
+      ${mList.length>0 ? `<span class="stat-chip">面談 ${mList.length}件</span>`:''}
+    </div>` : ''}
+  </div>`;
+}
+
+function renderEmpty(title, sub){
+  return `<div class="empty-state"><div class="ei">📭</div><p style="font-weight:600;color:var(--text);">${esc(title)}</p><p>${esc(sub)}</p></div>`;
+}
+
+// ---------- vessels view ----------
+function filteredVessels(){
+  let list = vessels.slice();
+  if(vesselCompanyFilter) list = list.filter(v=>String(v.company_id)===String(vesselCompanyFilter));
+  if(vesselTypeFilter) list = list.filter(v=>v.type===vesselTypeFilter);
+  if(vesselSectionFilter) list = list.filter(v=>v.section===vesselSectionFilter);
+  if(vesselSearchQ){
+    const q = vesselSearchQ.toLowerCase();
+    list = list.filter(v=>{
+      const comp = companies.find(c=>c.company_id===v.company_id);
+      const compName = comp?comp.name:'';
+      return FIELD_ORDER_V.some(f=>(v[f]||'').toString().toLowerCase().includes(q)) || compName.toLowerCase().includes(q);
+    });
+  }
+  list.sort((a,b)=>{
+    if(sortCol==='company_name'){
+      const ca = companies.find(c=>c.company_id===a.company_id);
+      const cb = companies.find(c=>c.company_id===b.company_id);
+      return (ca?ca.name:'').localeCompare(cb?cb.name:'', 'ja')*sortDir;
+    }
+    let av = a[sortCol], bv = b[sortCol];
+    if(sortCol==='dwt'||sortCol==='built'){
+      av = parseFloat(av)||0; bv = parseFloat(bv)||0;
+      return (av-bv)*sortDir;
+    }
+    av = (av||'').toString(); bv = (bv||'').toString();
+    return av.localeCompare(bv,'ja')*sortDir;
+  });
+  return list;
+}
+
+function renderVesselsView(){
+  const list = filteredVessels();
+  const types = uniqueVesselTypes();
+  const cols = [
+    {key:'company_name', label:'会社'},
+    {key:'section', label:'区分'},
+    {key:'type', label:'船種'},
+    {key:'name', label:'船名'},
+    {key:'imo', label:'IMO'},
+    {key:'flag', label:'旗国'},
+    {key:'dwt', label:'DWT'},
+    {key:'built', label:'建造年月'},
+    {key:'shipbuilder', label:'造船所'},
+    {key:'charterers', label:'傭船者'},
+    {key:'status', label:'ステータス'},
+  ];
+  return `
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="vesselSearch" placeholder="船名・IMO・傭船者・造船所などで検索" value="${esc(vesselSearchQ)}">
+      </div>
+      <select id="companyFilterSel">
+        <option value="">すべての会社</option>
+        ${companies.map(c=>`<option value="${c.company_id}" ${String(c.company_id)===String(vesselCompanyFilter)?'selected':''}>${esc(c.name)}</option>`).join('')}
+      </select>
+      <select id="typeFilterSel">
+        <option value="">すべての船種</option>
+        ${types.map(t=>`<option value="${esc(t)}" ${t===vesselTypeFilter?'selected':''}>${esc(t)}</option>`).join('')}
+      </select>
+      <select id="sectionFilterSel">
+        <option value="">すべての区分</option>
+        <option value="In Fleet" ${vesselSectionFilter==='In Fleet'?'selected':''}>保有</option>
+        <option value="Orderbook" ${vesselSectionFilter==='Orderbook'?'selected':''}>建造中</option>
+        <option value="Sold" ${vesselSectionFilter==='Sold'?'selected':''}>売却済</option>
+      </select>
+      <div class="spacer"></div>
+      <span class="count-pill">${list.length} 件表示</span>
+      <button class="btn btn-accent" id="addVesselBtn">+ 船舶を追加</button>
+    </div>
+    ${list.length===0 ? renderEmpty('該当する船舶がありません','検索・絞り込み条件を変更してください') : `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          ${cols.map(c=>`<th data-sort="${c.key}">${esc(c.label)}${sortCol===c.key?`<span class="sort-ind">${sortDir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${list.map(v=>renderVesselRow(v)).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+}
+
+function renderVesselRow(v){
+  const comp = companies.find(c=>c.company_id===v.company_id);
+  return `
+  <tr data-vessel="${v.vessel_id}">
+    <td class="ellipsis">${esc(comp?comp.name:v.company_sheet||'-')}</td>
+    <td>${sectionBadge(v.section)}</td>
+    <td>${esc(v.type||'-')}</td>
+    <td style="font-weight:600;">${esc(v.name||'-')}</td>
+    <td class="imo-mono">${esc(v.imo||'-')}</td>
+    <td>${esc(v.flag||'-')}</td>
+    <td>${fmtNum(v.dwt)}</td>
+    <td>${esc(v.built||'-')}</td>
+    <td class="ellipsis">${esc(v.shipbuilder||'-')}</td>
+    <td class="ellipsis">${esc(v.charterers||'-')}</td>
+    <td class="ellipsis">${esc(v.status||'-')}</td>
+  </tr>`;
+}
+
+// ---------- meetings view ----------
+function filteredMeetings(){
+  let list = meetings.slice();
+  if(meetingCompanyFilter) list = list.filter(m=>String(m.company_id)===String(meetingCompanyFilter));
+  if(meetingSearchQ){
+    const q = meetingSearchQ.toLowerCase();
+    list = list.filter(m=>{
+      const comp = companies.find(c=>c.company_id===m.company_id);
+      const compName = comp?comp.name:'';
+      return FIELD_ORDER_M.some(f=>(m[f]||'').toString().toLowerCase().includes(q)) || compName.toLowerCase().includes(q);
+    });
+  }
+  list.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  return list;
+}
+
+function renderMeetingsView(){
+  const list = filteredMeetings();
+  return `
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="meetingSearch" placeholder="出席者・内容・次のアクションなどで検索" value="${esc(meetingSearchQ)}">
+      </div>
+      <select id="meetingCompanyFilterSel">
+        <option value="">すべての会社</option>
+        ${companies.map(c=>`<option value="${c.company_id}" ${String(c.company_id)===String(meetingCompanyFilter)?'selected':''}>${esc(c.name)}</option>`).join('')}
+      </select>
+      <div class="spacer"></div>
+      <span class="count-pill">${list.length} 件表示</span>
+      <button class="btn btn-accent" id="addMeetingBtn">+ 面談記録を追加</button>
+    </div>
+    ${list.length===0 ? renderEmpty('面談記録がありません','会社を訪問・面談したら、ここから記録を追加できます') : `
+    <div class="company-grid">
+      ${list.map(m=>renderMeetingCard(m)).join('')}
+    </div>`}
+  `;
+}
+
+function renderMeetingCard(m){
+  const comp = companies.find(c=>c.company_id===m.company_id);
+  return `
+  <div class="ccard" data-meeting="${m.meeting_id}">
+    <div class="ccard-top">
+      <div>
+        <p class="ccard-name">${esc(comp?comp.name:'(会社未設定)')}</p>
+        <p class="ccard-ceo">${m.attendees ? '出席: '+esc(m.attendees) : ''}</p>
+      </div>
+      <span class="ccard-area">${esc(m.date||'-')}</span>
+    </div>
+    <div class="ccard-meta">
+      ${m.category ? `<div class="ccard-row"><span class="ico">🏷</span><span>${esc(m.category)}</span></div>` : ''}
+      ${m.summary ? `<div class="ccard-row" style="white-space:normal;"><span class="ico">💬</span><span style="white-space:normal;">${esc(m.summary.length>90?m.summary.slice(0,90)+'…':m.summary)}</span></div>` : ''}
+      ${m.next_action ? `<div class="ccard-row" style="white-space:normal;"><span class="ico">➡</span><span style="white-space:normal; color:var(--accent-dark); font-weight:600;">${esc(m.next_action.length>70?m.next_action.slice(0,70)+'…':m.next_action)}</span></div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ---------- import view ----------
+function renderImportView(){
+  return `
+    <div style="max-width:760px;">
+      ${renderImportSteps()}
+      ${importStep===1 ? renderImportStep1() : importStep===2 ? renderImportStep2() : renderImportStep3()}
+    </div>
+  `;
+}
+
+function renderImportSteps(){
+  const steps = [
+    {n:1, label:'データを用意'},
+    {n:2, label:'列を確認'},
+    {n:3, label:'取り込み確定'},
+  ];
+  return `
+  <div style="display:flex; gap:8px; margin-bottom:20px;">
+    ${steps.map(s=>`
+      <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:${importStep>=s.n?'var(--navy-700)':'var(--text-faint)'};">
+        <span style="width:22px;height:22px;border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11.5px; background:${importStep>=s.n?'var(--navy-700)':'var(--bg-panel)'}; color:${importStep>=s.n?'#fff':'var(--text-faint)'}; border:1px solid ${importStep>=s.n?'var(--navy-700)':'var(--line-strong)'};">${s.n}</span>
+        <span>${s.label}</span>
+      </div>
+      ${s.n<3 ? `<div style="flex:0 0 24px; height:1px; background:var(--line-strong); align-self:center;"></div>` : ''}
+    `).join('')}
+  </div>`;
+}
+
+function renderImportStep1(){
+  return `
+  <div class="table-wrap" style="padding:22px;">
+    <div class="field" style="margin-bottom:18px;">
+      <label>何を追加しますか</label>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <button class="btn ${importTargetType==='companies'?'btn-primary':''}" id="impTypeCompanies">会社情報</button>
+        <button class="btn ${importTargetType==='vessels'?'btn-primary':''}" id="impTypeVessels">船舶情報</button>
+        <button class="btn ${importTargetType==='meetings'?'btn-primary':''}" id="impTypeMeetings">面談記録</button>
+      </div>
+    </div>
+
+    ${(importTargetType==='vessels'||importTargetType==='meetings') ? `
+    <div class="field" style="margin-bottom:18px;">
+      <label>どの会社の${importTargetType==='vessels'?'船舶':'面談記録'}として追加しますか</label>
+      <select id="impVesselCompany" style="margin-top:6px; width:100%; max-width:360px;">
+        ${companies.map(c=>`<option value="${c.company_id}" ${c.company_id===importVesselCompanyId?'selected':''}>${esc(c.name)}</option>`).join('')}
+      </select>
+      <p style="font-size:12px; color:var(--text-soft); margin-top:6px;">表のデータに会社名の列がある場合は、次のステップでマッピングすれば自動で割り当てられます。なければここで選んだ会社にまとめて登録されます。</p>
+    </div>` : ''}
+
+    <div class="field" style="margin-bottom:14px;">
+      <label>Excel / CSV ファイルを選択</label>
+      <input type="file" id="impFileInput" accept=".xlsx,.xls,.csv" style="margin-top:6px;">
+    </div>
+
+    <div style="text-align:center; color:var(--text-faint); font-size:12px; margin:14px 0;">または</div>
+
+    <div class="field">
+      <label>表をコピーしてここに貼り付け（Excelからセル範囲をコピーしてOK）</label>
+      <textarea id="impPasteArea" style="margin-top:6px; min-height:140px; font-family:var(--font-mono,monospace); font-size:12px;" placeholder="Excelで範囲を選択してコピーし、ここに貼り付けてください"></textarea>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="impNextFromPaste">この内容で次へ</button>
+    </div>
+    <p id="impStep1Error" style="color:var(--danger); font-size:12.5px; margin-top:10px;"></p>
+  </div>`;
+}
+
+function renderImportStep2(){
+  if(importRawRows.length===0){
+    return `<div class="table-wrap" style="padding:22px;">${renderEmpty('データが読み込まれていません','前のステップに戻ってファイルを選択するか、表を貼り付けてください')}
+    <button class="btn" id="impBackTo1" style="margin-top:12px;">戻る</button></div>`;
+  }
+  const headers = importRawRows[importHeaderRowIndex] || [];
+  const fields = importTargetType==='companies' ? IMPORT_FIELDS_COMPANY : importTargetType==='vessels' ? IMPORT_FIELDS_VESSEL : IMPORT_FIELDS_MEETING;
+  const labels = importTargetType==='companies' ? FIELD_LABELS_C : importTargetType==='vessels' ? FIELD_LABELS_V : FIELD_LABELS_M;
+  const requiredField = importTargetType==='meetings' ? 'date' : 'name';
+  const previewRows = importRawRows.slice(importHeaderRowIndex+1, importHeaderRowIndex+4);
+
+  return `
+  <div class="table-wrap" style="padding:22px;">
+    <div class="field" style="margin-bottom:16px;">
+      <label>見出し行</label>
+      <select id="impHeaderRowSel" style="margin-top:6px; width:100%; max-width:300px;">
+        ${importRawRows.slice(0, Math.min(importRawRows.length,10)).map((r,i)=>`<option value="${i}" ${i===importHeaderRowIndex?'selected':''}>${i+1}行目: ${esc(r.filter(c=>c).slice(0,4).join(' / ')||'(空行)')}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="section-title" style="margin-top:0;">列の対応づけ</div>
+    <p style="font-size:12.5px; color:var(--text-soft); margin:-4px 0 14px;">それぞれの項目が、貼り付けたデータの何列目にあたるか選んでください。対応する列がなければ「－ 使用しない －」のままで構いません。</p>
+
+    <div class="field-grid">
+      ${(importTargetType==='vessels'||importTargetType==='meetings') ? `
+      <div class="field">
+        <label>会社名（任意・データに列があれば）</label>
+        <select class="impColSel" data-field="company_name_col">
+          <option value="-1" ${importColumnMap['company_name_col']===-1||importColumnMap['company_name_col']===undefined?'selected':''}>－ 使用しない（ステップ1で選んだ会社にまとめて登録） －</option>
+          ${headers.map((h,i)=>`<option value="${i}" ${importColumnMap['company_name_col']===i?'selected':''}>${i+1}列目: ${esc((h||'').toString().slice(0,24)||'(無題)')}</option>`).join('')}
+        </select>
+        <p style="font-size:11.5px; color:var(--text-soft); margin-top:5px;">会社名の列を選ぶと、既存の会社名と一致するものは自動で紐付け、一致しない名前は新しい会社として追加されます。</p>
+      </div>` : ''}
+      ${fields.map(f=>`
+        <div class="field">
+          <label>${labels[f]}${f===requiredField?' *':''}</label>
+          <select class="impColSel" data-field="${f}">
+            <option value="-1" ${importColumnMap[f]===-1||importColumnMap[f]===undefined?'selected':''}>－ 使用しない －</option>
+            ${headers.map((h,i)=>`<option value="${i}" ${importColumnMap[f]===i?'selected':''}>${i+1}列目: ${esc((h||'').toString().slice(0,24)||'(無題)')}</option>`).join('')}
+          </select>
+        </div>
+      `).join('')}
+      ${importTargetType==='vessels' ? `
+      <div class="field">
+        <label>区分（保有/建造中/売却済）</label>
+        <select class="impColSel" data-field="section">
+          <option value="-1" ${importColumnMap['section']===-1||importColumnMap['section']===undefined?'selected':''}>－ すべて「保有」として登録 －</option>
+          ${headers.map((h,i)=>`<option value="${i}" ${importColumnMap['section']===i?'selected':''}>${i+1}列目: ${esc((h||'').toString().slice(0,24)||'(無題)')}</option>`).join('')}
+        </select>
+      </div>` : ''}
+    </div>
+
+    <div class="section-title">プレビュー（先頭3行）</div>
+    <div style="overflow-x:auto;">
+      <table style="font-size:11.5px;">
+        <thead><tr>${headers.map((h,i)=>`<th>${i+1}: ${esc((h||'').toString().slice(0,16))}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${previewRows.map(r=>`<tr>${headers.map((h,i)=>`<td>${esc((r[i]||'').toString().slice(0,30))}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn" id="impBackTo1">戻る</button>
+      <button class="btn btn-primary" id="impNextTo3">プレビューへ進む</button>
+    </div>
+    <p id="impStep2Error" style="color:var(--danger); font-size:12.5px; margin-top:10px;"></p>
+  </div>`;
+}
+
+function buildImportRecords(){
+  const headers = importRawRows[importHeaderRowIndex] || [];
+  const dataRows = importRawRows.slice(importHeaderRowIndex+1).filter(r=>r.some(c=>(c||'').toString().trim()!==''));
+  const fields = importTargetType==='companies' ? IMPORT_FIELDS_COMPANY : importTargetType==='vessels' ? IMPORT_FIELDS_VESSEL : IMPORT_FIELDS_MEETING;
+  const records = dataRows.map(r=>{
+    const rec = {};
+    fields.forEach(f=>{
+      const idx = importColumnMap[f];
+      rec[f] = (idx!==undefined && idx>=0 && r[idx]!==undefined) ? r[idx].toString().trim() : '';
+      if(rec[f]==='') rec[f]=null;
+    });
+    if(importTargetType==='vessels'){
+      const sIdx = importColumnMap['section'];
+      let sectionRaw = (sIdx!==undefined && sIdx>=0 && r[sIdx]!==undefined) ? r[sIdx].toString().trim().toLowerCase() : '';
+      let section = 'In Fleet';
+      if(sectionRaw.includes('sold')||sectionRaw.includes('売却')) section='Sold';
+      else if(sectionRaw.includes('order')||sectionRaw.includes('建造')) section='Orderbook';
+      rec.section = section;
+      ['dwt','m3','loa','beam','depth','sale_price'].forEach(nf=>{
+        if(rec[nf]!==null && rec[nf]!==undefined){
+          const num = parseFloat(rec[nf].toString().replace(/,/g,''));
+          rec[nf] = isNaN(num) ? null : num;
+        }
+      });
+      const cIdx = importColumnMap['company_name_col'];
+      if(cIdx!==undefined && cIdx>=0 && r[cIdx]!==undefined && r[cIdx].toString().trim()!==''){
+        rec._import_company_name = r[cIdx].toString().trim();
+      } else {
+        rec._import_company_name = null;
+      }
+    }
+    if(importTargetType==='meetings'){
+      const cIdx = importColumnMap['company_name_col'];
+      if(cIdx!==undefined && cIdx>=0 && r[cIdx]!==undefined && r[cIdx].toString().trim()!==''){
+        rec._import_company_name = r[cIdx].toString().trim();
+      } else {
+        rec._import_company_name = null;
+      }
+    }
+    return rec;
+  });
+  return records;
+}
+
+function renderImportStep3(){
+  const records = buildImportRecords();
+  const labels = importTargetType==='companies' ? FIELD_LABELS_C : importTargetType==='vessels' ? FIELD_LABELS_V : FIELD_LABELS_M;
+  const keyField = importTargetType==='meetings' ? 'date' : 'name';
+  const validRecords = records.filter(r=>r[keyField]);
+  const invalidCount = records.length - validRecords.length;
+
+  let dupWarnings = [];
+  let newCompanyNames = [];
+  if(importTargetType==='companies'){
+    const existingNames = new Set(companies.map(c=>c.name));
+    validRecords.forEach(r=>{ if(existingNames.has(r.name)) dupWarnings.push(r.name); });
+  } else if(importTargetType==='vessels') {
+    const existingImos = new Set(vessels.map(v=>v.imo).filter(Boolean));
+    const existingCompanyNames = new Set(companies.map(c=>c.name));
+    validRecords.forEach(r=>{
+      if(r.imo && existingImos.has(r.imo)) dupWarnings.push(r.name+' (IMO '+r.imo+')');
+      if(r._import_company_name && !existingCompanyNames.has(r._import_company_name) && !newCompanyNames.includes(r._import_company_name)){
+        newCompanyNames.push(r._import_company_name);
+      }
+    });
+  } else if(importTargetType==='meetings') {
+    const existingCompanyNames = new Set(companies.map(c=>c.name));
+    validRecords.forEach(r=>{
+      if(r._import_company_name && !existingCompanyNames.has(r._import_company_name) && !newCompanyNames.includes(r._import_company_name)){
+        newCompanyNames.push(r._import_company_name);
+      }
+    });
+  }
+
+  const displayFields = importTargetType==='companies' ? IMPORT_FIELDS_COMPANY
+    : importTargetType==='vessels' ? ['section','_import_company_name'].concat(IMPORT_FIELDS_VESSEL)
+    : ['_import_company_name'].concat(IMPORT_FIELDS_MEETING);
+
+  return `
+  <div class="table-wrap" style="padding:22px;">
+    <div class="count-pill" style="margin-bottom:14px; display:inline-block;">取り込み対象 ${validRecords.length} 件${invalidCount>0?` ・ ${importTargetType==='meetings'?'日付':'名称'}未入力のためスキップ ${invalidCount} 件`:''}</div>
+    ${newCompanyNames.length>0 ? `<p style="font-size:12.5px; color:var(--navy-600); margin:0 0 10px;">ℹ 新しい会社として自動追加されます: ${esc(newCompanyNames.slice(0,8).join('、'))}${newCompanyNames.length>8?' 他':''}</p>` : ''}
+    ${dupWarnings.length>0 ? `<p style="font-size:12.5px; color:var(--warn); margin:0 0 14px;">⚠ 既存データと同名/同IMOの可能性があるものが ${dupWarnings.length} 件あります（${esc(dupWarnings.slice(0,5).join('、'))}${dupWarnings.length>5?' 他':''}）。重複登録される場合があるためご注意ください。</p>` : ''}
+
+    <div style="overflow-x:auto; max-height:420px; overflow-y:auto; border:1px solid var(--line); border-radius:8px;">
+      <table style="font-size:11.5px;">
+        <thead><tr>
+          ${displayFields.map(f=>`<th>${esc(f==='_import_company_name'?'会社名':(labels[f]||f))}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${validRecords.slice(0,200).map(r=>`<tr>
+            ${displayFields.map(f=>`<td>${esc((r[f]??'').toString().slice(0,40))}</td>`).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${validRecords.length>200 ? `<p style="font-size:12px; color:var(--text-soft); margin-top:8px;">表示は先頭200件まで。取り込みは全${validRecords.length}件に適用されます。</p>` : ''}
+
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn" id="impBackTo2">戻る</button>
+      <button class="btn btn-accent" id="impConfirm" ${validRecords.length===0?'disabled':''}>この内容で取り込む（${validRecords.length}件）</button>
+    </div>
+  </div>`;
+}
+
+
+function openCompanyDrawer(id){
+  activeCompanyId = id;
+  drawerTab = 'info';
+  editingCompany = null;
+  renderDrawerOverlay();
+}
+function closeDrawer(){
+  const ov = document.getElementById('drawerOverlay');
+  if(ov) ov.remove();
+  activeCompanyId = null;
+  editingCompany = null;
+  editingVessel = null;
+}
+
+function renderDrawerOverlay(){
+  let ov = document.getElementById('drawerOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.id = 'drawerOverlay';
+    document.body.appendChild(ov);
+  }
+  const c = companies.find(x=>x.company_id===activeCompanyId);
+  if(!c){ closeDrawer(); return; }
+  const vList = companyVessels(c.company_id);
+  const mList = companyMeetings(c.company_id);
+  const isEditing = !!editingCompany;
+  const data = isEditing ? editingCompany : c;
+
+  ov.innerHTML = `
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="drawer-head-top">
+          <div>
+            <span class="drawer-area">${esc(c.area||'-')}</span>
+            <h2>${esc(c.name)}</h2>
+            ${c.name_en ? `<p class="ceo" style="opacity:.85;">${esc(c.name_en)}</p>` : ''}
+            <p class="ceo">${c.ceo?'代表: '+esc(c.ceo):''}</p>
+            ${normalizeUrl(c.website) ? `<a href="${esc(normalizeUrl(c.website))}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#cfe0f5; margin-top:6px; text-decoration:none;">🌐 ウェブサイトを開く</a>` : ''}
+          </div>
+          <button class="close-btn" id="drawerClose">✕</button>
+        </div>
+        <div class="drawer-tabs">
+          <button data-tab="info" class="${drawerTab==='info'?'active':''}">会社情報</button>
+          <button data-tab="vessels" class="${drawerTab==='vessels'?'active':''}">保有船舶 (${vList.length})</button>
+          <button data-tab="meetings" class="${drawerTab==='meetings'?'active':''}">面談履歴 (${mList.length})</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        ${drawerTab==='info' ? renderCompanyInfoTab(data, isEditing) : drawerTab==='vessels' ? renderCompanyVesselsTab(c, vList) : renderCompanyMeetingsTab(c, mList)}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('drawerClose').onclick = closeDrawer;
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeDrawer(); });
+  ov.querySelectorAll('[data-tab]').forEach(btn=>{
+    btn.onclick = ()=>{ drawerTab = btn.dataset.tab; editingCompany=null; renderDrawerOverlay(); };
+  });
+
+  if(drawerTab==='info'){
+    if(!isEditing){
+      document.getElementById('editCompanyBtn').onclick = ()=>{
+        editingCompany = JSON.parse(JSON.stringify(c));
+        renderDrawerOverlay();
+      };
+      const delBtn = document.getElementById('deleteCompanyBtn');
+      if(delBtn) delBtn.onclick = ()=> confirmDelete('company', c.company_id, c.name);
+    }else{
+      document.getElementById('cancelEditBtn').onclick = ()=>{ editingCompany=null; renderDrawerOverlay(); };
+      document.getElementById('saveCompanyBtn').onclick = async ()=>{
+        FIELD_ORDER_C.forEach(f=>{
+          const el = document.getElementById('f_'+f);
+          if(el) editingCompany[f] = el.value.trim() || null;
+        });
+        const idx = companies.findIndex(x=>x.company_id===c.company_id);
+        companies[idx] = editingCompany;
+        await saveCompanies();
+        editingCompany = null;
+        showToast('会社情報を保存しました');
+        renderDrawerOverlay();
+        render();
+      };
+    }
+  } else if(drawerTab==='vessels') {
+    ov.querySelectorAll('[data-vessel-mini]').forEach(el=>{
+      el.onclick = ()=>{
+        closeDrawer();
+        openVesselDrawer(parseInt(el.dataset.vesselMini));
+      };
+    });
+    const addBtn = document.getElementById('addVesselFromCompany');
+    if(addBtn) addBtn.onclick = ()=>{ closeDrawer(); openVesselDrawer(null, c.company_id); };
+  } else if(drawerTab==='meetings') {
+    ov.querySelectorAll('[data-meeting-mini]').forEach(el=>{
+      el.onclick = ()=>{
+        closeDrawer();
+        openMeetingDrawer(parseInt(el.dataset.meetingMini));
+      };
+    });
+    const addBtn = document.getElementById('addMeetingFromCompany');
+    if(addBtn) addBtn.onclick = ()=>{ closeDrawer(); openMeetingDrawer(null, c.company_id); };
+  }
+}
+
+function renderCompanyInfoTab(data, isEditing){
+  if(isEditing){
+    return `
+      <div class="field-grid">
+        ${FIELD_ORDER_C.map(f=>{
+          const isLong = ['address','registered_owner','related_company','banks','broker','type_of_vessel','shipyard','tc_fleet','bbc_fleet','tc_charterer','bbc_charterer','newbuilding'].includes(f);
+          return `<div class="field ${isLong?'full':''}">
+            <label>${FIELD_LABELS_C[f]}</label>
+            ${isLong ? `<textarea id="f_${f}">${esc(data[f]||'')}</textarea>` : `<input id="f_${f}" value="${esc(data[f]||'')}">`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex; gap:8px; margin-top:20px;">
+        <button class="btn btn-primary" id="saveCompanyBtn">保存する</button>
+        <button class="btn" id="cancelEditBtn">キャンセル</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="field-grid">
+      ${FIELD_ORDER_C.filter(f=>f!=='area'&&f!=='name'&&f!=='name_en'&&f!=='ceo').map(f=>{
+        const isLong = ['address','registered_owner','related_company','banks','broker','type_of_vessel','shipyard','tc_fleet','bbc_fleet','tc_charterer','bbc_charterer','newbuilding'].includes(f);
+        const val = data[f];
+        if(f==='website'){
+          const url = normalizeUrl(val);
+          return `<div class="field">
+            <label>${FIELD_LABELS_C[f]}</label>
+            <div class="val ${!val?'empty':''}">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--navy-800);">${esc(val)}</a>` : '未登録'}</div>
+          </div>`;
+        }
+        return `<div class="field ${isLong?'full':''}">
+          <label>${FIELD_LABELS_C[f]}</label>
+          <div class="val ${!val?'empty':''}">${val ? nl2br(val) : '未登録'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="editCompanyBtn">編集する</button>
+      <button class="btn btn-danger" id="deleteCompanyBtn">この会社を削除</button>
+    </div>
+  `;
+}
+
+function renderCompanyVesselsTab(c, vList){
+  const sections = ['In Fleet','Orderbook','Sold'];
+  const labels = {'In Fleet':'保有船','Orderbook':'建造中（オーダーブック）','Sold':'売却済'};
+  let html = '';
+  sections.forEach(sec=>{
+    const items = vList.filter(v=>v.section===sec);
+    if(items.length===0) return;
+    html += `<div class="section-title">${labels[sec]} (${items.length})</div>`;
+    items.forEach(v=>{
+      html += `
+      <div class="vessel-mini" data-vessel-mini="${v.vessel_id}">
+        <div>
+          <div class="vessel-mini-name">${esc(v.name||'(船名未登録)')} ${v.type?`<span style="font-weight:400;color:var(--text-soft);font-size:11.5px;">／ ${esc(v.type)}</span>`:''}</div>
+          <div class="vessel-mini-sub">${v.imo?'IMO '+esc(v.imo)+' ・ ':''}${v.dwt?fmtNum(v.dwt)+' DWT ・ ':''}${esc(v.built||'')} ${v.charterers?'・ '+esc(v.charterers):''}</div>
+        </div>
+        ${sectionBadge(v.section)}
+      </div>`;
+    });
+  });
+  if(vList.length===0){
+    html = renderEmpty('登録されている船舶はありません','下のボタンから船舶を追加できます');
+  }
+  html += `<div style="margin-top:16px;"><button class="btn btn-accent" id="addVesselFromCompany">+ この会社に船舶を追加</button></div>`;
+  return html;
+}
+
+function renderCompanyMeetingsTab(c, mList){
+  let html = '';
+  if(mList.length===0){
+    html = renderEmpty('面談記録はまだありません','下のボタンから記録を追加できます');
+  } else {
+    mList.forEach(m=>{
+      html += `
+      <div class="vessel-mini" data-meeting-mini="${m.meeting_id}" style="align-items:flex-start;">
+        <div style="min-width:0;">
+          <div class="vessel-mini-name">${esc(m.date||'(日付未登録)')} ${m.category?`<span style="font-weight:400;color:var(--text-soft);font-size:11.5px;">／ ${esc(m.category)}</span>`:''}</div>
+          <div class="vessel-mini-sub">${m.attendees?'出席: '+esc(m.attendees):''}</div>
+          ${m.summary?`<div style="font-size:12px;color:var(--text);margin-top:6px;white-space:pre-line;">${nl2br(m.summary.length>120?m.summary.slice(0,120)+'…':m.summary)}</div>`:''}
+          ${m.next_action?`<div style="font-size:11.5px;color:var(--accent-dark);margin-top:5px;">次のアクション: ${esc(m.next_action.length>80?m.next_action.slice(0,80)+'…':m.next_action)}</div>`:''}
+        </div>
+      </div>`;
+    });
+  }
+  html += `<div style="margin-top:16px;"><button class="btn btn-accent" id="addMeetingFromCompany">+ この会社の面談記録を追加</button></div>`;
+  return html;
+}
+
+// ---------- drawer: vessel detail / edit ----------
+function openVesselDrawer(id, presetCompanyId){
+  editingVessel = null;
+  if(id===null){
+    editingVessel = {
+      vessel_id:null, company_id:presetCompanyId||(companies[0]?companies[0].company_id:null),
+      company_sheet:'', section:'In Fleet', biz:'', type:'', imo:'', name:'', ex_name:'',
+      flag:'', dwt:'', m3:'', built:'', loa:'', beam:'', depth:'', shipbuilder:'', charterers:'',
+      group_owner:'', registered_owner:'', ship_manager:'', status:'In Service/Commission',
+      sale_date:'', sale_price:'', note:''
+    };
+    renderVesselDrawerOverlay(true);
+    return;
+  }
+  renderVesselDrawerOverlay(false, id);
+}
+
+function closeVesselDrawer(){
+  const ov = document.getElementById('vesselOverlay');
+  if(ov) ov.remove();
+  editingVessel = null;
+}
+
+function renderVesselDrawerOverlay(isNew, id){
+  let ov = document.getElementById('vesselOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.id = 'vesselOverlay';
+    document.body.appendChild(ov);
+  }
+  let v;
+  let isEditing = isNew;
+  if(isNew){
+    v = editingVessel;
+  } else {
+    v = editingVessel && editingVessel.vessel_id===id ? editingVessel : vessels.find(x=>x.vessel_id===id);
+    isEditing = !!(editingVessel && editingVessel.vessel_id===id);
+  }
+  if(!v){ closeVesselDrawer(); return; }
+  const comp = companies.find(c=>c.company_id===v.company_id);
+
+  ov.innerHTML = `
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="drawer-head-top">
+          <div>
+            <span class="drawer-area">${esc(v.section==='In Fleet'?'保有':v.section==='Orderbook'?'建造中':v.section==='Sold'?'売却済':'-')}</span>
+            <h2>${esc(v.name||(isNew?'新規船舶':'(船名未登録)'))}</h2>
+            <p class="ceo">${esc(comp?comp.name:'')}</p>
+          </div>
+          <button class="close-btn" id="vDrawerClose">✕</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        ${isEditing ? renderVesselEditForm(v, isNew) : renderVesselInfoView(v)}
+      </div>
+    </div>
+  `;
+  document.getElementById('vDrawerClose').onclick = closeVesselDrawer;
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeVesselDrawer(); });
+
+  if(!isEditing){
+    document.getElementById('editVesselBtn').onclick = ()=>{
+      editingVessel = JSON.parse(JSON.stringify(v));
+      renderVesselDrawerOverlay(false, v.vessel_id);
+    };
+    document.getElementById('deleteVesselBtn').onclick = ()=> confirmDelete('vessel', v.vessel_id, v.name||'(船名未登録)');
+  } else {
+    document.getElementById('cancelVesselEditBtn').onclick = ()=>{
+      if(isNew){ closeVesselDrawer(); }
+      else { editingVessel=null; renderVesselDrawerOverlay(false, v.vessel_id); }
+    };
+    document.getElementById('saveVesselBtn').onclick = async ()=>{
+      const draft = isNew ? editingVessel : editingVessel;
+      FIELD_ORDER_V.forEach(f=>{
+        const el = document.getElementById('vf_'+f);
+        if(el){
+          if(f==='dwt'||f==='m3'||f==='loa'||f==='beam'||f==='depth'||f==='sale_price'){
+            draft[f] = el.value.trim()===''? null : Number(el.value);
+          } else {
+            draft[f] = el.value.trim() || null;
+          }
+        }
+      });
+      const compSel = document.getElementById('vf_company_id');
+      if(compSel) draft.company_id = parseInt(compSel.value);
+      const c2 = companies.find(c=>c.company_id===draft.company_id);
+      draft.company_sheet = c2 ? c2.name : draft.company_sheet;
+
+      if(isNew){
+        draft.vessel_id = nextId(vessels, 'vessel_id');
+        vessels.push(draft);
+      } else {
+        const idx = vessels.findIndex(x=>x.vessel_id===draft.vessel_id);
+        vessels[idx] = draft;
+      }
+      await saveVessels();
+      showToast(isNew ? '船舶を追加しました' : '船舶情報を保存しました');
+      editingVessel = null;
+      closeVesselDrawer();
+      render();
+    };
+  }
+}
+
+function renderVesselEditForm(v, isNew){
+  const longFields = ['charterers','note'];
+  return `
+    <div class="field-grid">
+      <div class="field">
+        <label>会社</label>
+        <select id="vf_company_id">
+          ${companies.map(c=>`<option value="${c.company_id}" ${c.company_id===v.company_id?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>区分</label>
+        <select id="vf_section">
+          <option value="In Fleet" ${v.section==='In Fleet'?'selected':''}>保有</option>
+          <option value="Orderbook" ${v.section==='Orderbook'?'selected':''}>建造中</option>
+          <option value="Sold" ${v.section==='Sold'?'selected':''}>売却済</option>
+        </select>
+      </div>
+      ${FIELD_ORDER_V.filter(f=>f!=='section').map(f=>{
+        const isLong = longFields.includes(f);
+        return `<div class="field ${isLong?'full':''}">
+          <label>${FIELD_LABELS_V[f]}</label>
+          ${isLong ? `<textarea id="vf_${f}">${esc(v[f]||'')}</textarea>` : `<input id="vf_${f}" value="${esc(v[f]??'')}">`}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="saveVesselBtn">保存する</button>
+      <button class="btn" id="cancelVesselEditBtn">キャンセル</button>
+    </div>
+  `;
+}
+
+function renderVesselInfoView(v){
+  return `
+    <div class="field-grid">
+      ${FIELD_ORDER_V.filter(f=>f!=='section').map(f=>{
+        const isLong = ['charterers','note'].includes(f);
+        const val = f==='dwt'||f==='loa'||f==='beam'||f==='depth'||f==='sale_price' ? (v[f]!=null?fmtNum(v[f]):null) : v[f];
+        return `<div class="field ${isLong?'full':''}">
+          <label>${FIELD_LABELS_V[f]}</label>
+          <div class="val ${!val?'empty':''}">${val ? nl2br(val) : '未登録'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="editVesselBtn">編集する</button>
+      <button class="btn btn-danger" id="deleteVesselBtn">この船舶を削除</button>
+    </div>
+  `;
+}
+
+// ---------- drawer: meeting detail / edit ----------
+function openMeetingDrawer(id, presetCompanyId){
+  editingMeeting = null;
+  if(id===null){
+    editingMeeting = {
+      meeting_id:null, company_id:presetCompanyId||(companies[0]?companies[0].company_id:null),
+      date:new Date().toISOString().slice(0,10), attendees:'', category:'', summary:'', next_action:''
+    };
+    renderMeetingDrawerOverlay(true);
+    return;
+  }
+  renderMeetingDrawerOverlay(false, id);
+}
+
+function closeMeetingDrawer(){
+  const ov = document.getElementById('meetingOverlay');
+  if(ov) ov.remove();
+  editingMeeting = null;
+}
+
+function renderMeetingDrawerOverlay(isNew, id){
+  let ov = document.getElementById('meetingOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.id = 'meetingOverlay';
+    document.body.appendChild(ov);
+  }
+  let m;
+  let isEditing = isNew;
+  if(isNew){
+    m = editingMeeting;
+  } else {
+    m = editingMeeting && editingMeeting.meeting_id===id ? editingMeeting : meetings.find(x=>x.meeting_id===id);
+    isEditing = !!(editingMeeting && editingMeeting.meeting_id===id);
+  }
+  if(!m){ closeMeetingDrawer(); return; }
+  const comp = companies.find(c=>c.company_id===m.company_id);
+
+  ov.innerHTML = `
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="drawer-head-top">
+          <div>
+            <span class="drawer-area">面談記録</span>
+            <h2>${esc(m.date||(isNew?'新規面談記録':'(日付未登録)'))}</h2>
+            <p class="ceo">${esc(comp?comp.name:'')}</p>
+          </div>
+          <button class="close-btn" id="mDrawerClose">✕</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        ${isEditing ? renderMeetingEditForm(m, isNew) : renderMeetingInfoView(m)}
+      </div>
+    </div>
+  `;
+  document.getElementById('mDrawerClose').onclick = closeMeetingDrawer;
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeMeetingDrawer(); });
+
+  if(!isEditing){
+    document.getElementById('editMeetingBtn').onclick = ()=>{
+      editingMeeting = JSON.parse(JSON.stringify(m));
+      renderMeetingDrawerOverlay(false, m.meeting_id);
+    };
+    document.getElementById('deleteMeetingBtn').onclick = ()=> confirmDelete('meeting', m.meeting_id, (comp?comp.name+' ':'')+(m.date||''));
+  } else {
+    document.getElementById('cancelMeetingEditBtn').onclick = ()=>{
+      if(isNew){ closeMeetingDrawer(); }
+      else { editingMeeting=null; renderMeetingDrawerOverlay(false, m.meeting_id); }
+    };
+    document.getElementById('saveMeetingBtn').onclick = async ()=>{
+      const draft = editingMeeting;
+      FIELD_ORDER_M.forEach(f=>{
+        const el = document.getElementById('mf_'+f);
+        if(el) draft[f] = el.value.trim() || null;
+      });
+      const compSel = document.getElementById('mf_company_id');
+      if(compSel) draft.company_id = parseInt(compSel.value);
+
+      if(isNew){
+        draft.meeting_id = nextId(meetings, 'meeting_id');
+        meetings.push(draft);
+      } else {
+        const idx = meetings.findIndex(x=>x.meeting_id===draft.meeting_id);
+        meetings[idx] = draft;
+      }
+      await saveMeetings();
+      showToast(isNew ? '面談記録を追加しました' : '面談記録を保存しました');
+      editingMeeting = null;
+      closeMeetingDrawer();
+      render();
+    };
+  }
+}
+
+function renderMeetingEditForm(m, isNew){
+  const longFields = ['summary','next_action'];
+  return `
+    <div class="field-grid">
+      <div class="field">
+        <label>会社</label>
+        <select id="mf_company_id">
+          ${companies.map(c=>`<option value="${c.company_id}" ${c.company_id===m.company_id?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>${FIELD_LABELS_M.date}</label>
+        <input id="mf_date" type="date" value="${esc(m.date||'')}">
+      </div>
+      ${FIELD_ORDER_M.filter(f=>f!=='date').map(f=>{
+        const isLong = longFields.includes(f);
+        return `<div class="field ${isLong?'full':''}">
+          <label>${FIELD_LABELS_M[f]}</label>
+          ${isLong ? `<textarea id="mf_${f}">${esc(m[f]||'')}</textarea>` : `<input id="mf_${f}" value="${esc(m[f]??'')}">`}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="saveMeetingBtn">保存する</button>
+      <button class="btn" id="cancelMeetingEditBtn">キャンセル</button>
+    </div>
+  `;
+}
+
+function renderMeetingInfoView(m){
+  return `
+    <div class="field-grid">
+      ${FIELD_ORDER_M.map(f=>{
+        const isLong = ['summary','next_action'].includes(f);
+        const val = m[f];
+        return `<div class="field ${isLong?'full':''}">
+          <label>${FIELD_LABELS_M[f]}</label>
+          <div class="val ${!val?'empty':''}">${val ? nl2br(val) : '未登録'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button class="btn btn-primary" id="editMeetingBtn">編集する</button>
+      <button class="btn btn-danger" id="deleteMeetingBtn">この面談記録を削除</button>
+    </div>
+  `;
+}
+
+// ---------- add company ----------
+function openAddCompanyDrawer(){
+  const newC = {
+    company_id:null, area:'', name:'', name_en:'', ceo:'', pic:'', address:'', tel:'', mail:'', website:'',
+    registered_owner:'', related_company:'', banks:'', broker:'', type_of_vessel:'',
+    shipyard:'', tc_fleet:'', bbc_fleet:'', tc_charterer:'', bbc_charterer:'', newbuilding:''
+  };
+  let ov = document.getElementById('drawerOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.id = 'drawerOverlay';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="drawer-head-top">
+          <div><h2>新しい会社を追加</h2></div>
+          <button class="close-btn" id="drawerClose">✕</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <div class="field-grid">
+          ${FIELD_ORDER_C.map(f=>{
+            const isLong = ['address','registered_owner','related_company','banks','broker','type_of_vessel','shipyard','tc_fleet','bbc_fleet','tc_charterer','bbc_charterer','newbuilding'].includes(f);
+            return `<div class="field ${isLong?'full':''}">
+              <label>${FIELD_LABELS_C[f]}</label>
+              ${isLong ? `<textarea id="nf_${f}"></textarea>` : `<input id="nf_${f}">`}
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex; gap:8px; margin-top:20px;">
+          <button class="btn btn-primary" id="createCompanyBtn">追加する</button>
+          <button class="btn" id="cancelCreateBtn">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('drawerClose').onclick = closeDrawer;
+  document.getElementById('cancelCreateBtn').onclick = closeDrawer;
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeDrawer(); });
+  document.getElementById('createCompanyBtn').onclick = async ()=>{
+    const nameVal = document.getElementById('nf_name').value.trim();
+    if(!nameVal){ showToast('会社名を入力してください'); return; }
+    FIELD_ORDER_C.forEach(f=>{
+      const el = document.getElementById('nf_'+f);
+      newC[f] = el.value.trim() || null;
+    });
+    newC.company_id = nextId(companies, 'company_id');
+    companies.push(newC);
+    await saveCompanies();
+    closeDrawer();
+    showToast('会社を追加しました');
+    render();
+  };
+}
+
+// ---------- delete confirm ----------
+function confirmDelete(type, id, label){
+  pendingDelete = {type, id};
+  const modal = document.getElementById('confirmModal');
+  const titleMap = {company:'会社を削除しますか？', vessel:'船舶を削除しますか？', meeting:'面談記録を削除しますか？'};
+  document.getElementById('confirmTitle').textContent = titleMap[type] || '削除しますか？';
+  document.getElementById('confirmMsg').textContent = `「${label}」を削除します。${type==='company' ? 'この会社に登録された船舶・面談記録もあわせて削除されます。' : ''}この操作は取り消せません。`;
+  modal.classList.add('show');
+}
+function setupModal(){
+  document.getElementById('confirmCancel').onclick = ()=>{
+    document.getElementById('confirmModal').classList.remove('show');
+    pendingDelete = null;
+  };
+  document.getElementById('confirmOk').onclick = async ()=>{
+    if(!pendingDelete) return;
+    if(pendingDelete.type==='company'){
+      companies = companies.filter(c=>c.company_id!==pendingDelete.id);
+      vessels = vessels.filter(v=>v.company_id!==pendingDelete.id);
+      meetings = meetings.filter(m=>m.company_id!==pendingDelete.id);
+      await saveCompanies();
+      await saveVessels();
+      await saveMeetings();
+      closeDrawer();
+      showToast('会社を削除しました');
+    } else if(pendingDelete.type==='vessel') {
+      vessels = vessels.filter(v=>v.vessel_id!==pendingDelete.id);
+      await saveVessels();
+      closeVesselDrawer();
+      showToast('船舶を削除しました');
+    } else if(pendingDelete.type==='meeting') {
+      meetings = meetings.filter(m=>m.meeting_id!==pendingDelete.id);
+      await saveMeetings();
+      closeMeetingDrawer();
+      showToast('面談記録を削除しました');
+    }
+    document.getElementById('confirmModal').classList.remove('show');
+    pendingDelete = null;
+    render();
+  };
+}
+
+// ---------- export ----------
+function exportJSON(){
+  const data = {companies, vessels, meetings};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'owners_database_export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('JSONファイルをダウンロードしました');
+}
+
+// ---------- event wiring ----------
+function attachGlobalHandlers(){
+  document.querySelectorAll('[data-nav]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const target = btn.dataset.nav;
+      if(target==='import' && view!=='import'){
+        resetImportWizard();
+      }
+      view = target;
+      render();
+    };
+  });
+  const exportBtn = document.getElementById('exportBtn');
+  if(exportBtn) exportBtn.onclick = exportJSON;
+
+  if(view==='companies'){
+    const s = document.getElementById('companySearch');
+    if(s){
+      s.oninput = ()=>{ searchQ = s.value; render(); setTimeout(()=>{
+        const el = document.getElementById('companySearch');
+        if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      },0); };
+    }
+    const af = document.getElementById('areaFilter');
+    if(af) af.onchange = ()=>{ areaFilter = af.value; render(); };
+    const addBtn = document.getElementById('addCompanyBtn');
+    if(addBtn) addBtn.onclick = openAddCompanyDrawer;
+    document.querySelectorAll('[data-company]').forEach(card=>{
+      card.onclick = ()=> openCompanyDrawer(parseInt(card.dataset.company));
+    });
+    document.querySelectorAll('.ccard-web-btn').forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const url = btn.dataset.websiteUrl;
+        if(url) window.open(url, '_blank', 'noopener,noreferrer');
+      };
+    });
+  } else if(view==='vessels') {
+    const s = document.getElementById('vesselSearch');
+    if(s){
+      s.oninput = ()=>{ vesselSearchQ = s.value; render(); setTimeout(()=>{
+        const el = document.getElementById('vesselSearch');
+        if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      },0); };
+    }
+    const cf = document.getElementById('companyFilterSel');
+    if(cf) cf.onchange = ()=>{ vesselCompanyFilter = cf.value; render(); };
+    const tf = document.getElementById('typeFilterSel');
+    if(tf) tf.onchange = ()=>{ vesselTypeFilter = tf.value; render(); };
+    const sf = document.getElementById('sectionFilterSel');
+    if(sf) sf.onchange = ()=>{ vesselSectionFilter = sf.value; render(); };
+    const addV = document.getElementById('addVesselBtn');
+    if(addV) addV.onclick = ()=> openVesselDrawer(null);
+    document.querySelectorAll('th[data-sort]').forEach(th=>{
+      th.onclick = ()=>{
+        const col = th.dataset.sort;
+        if(sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=1; }
+        render();
+      };
+    });
+    document.querySelectorAll('[data-vessel]').forEach(row=>{
+      row.onclick = ()=> openVesselDrawer(parseInt(row.dataset.vessel));
+    });
+  } else if(view==='meetings') {
+    const s = document.getElementById('meetingSearch');
+    if(s){
+      s.oninput = ()=>{ meetingSearchQ = s.value; render(); setTimeout(()=>{
+        const el = document.getElementById('meetingSearch');
+        if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      },0); };
+    }
+    const cf = document.getElementById('meetingCompanyFilterSel');
+    if(cf) cf.onchange = ()=>{ meetingCompanyFilter = cf.value; render(); };
+    const addM = document.getElementById('addMeetingBtn');
+    if(addM) addM.onclick = ()=> openMeetingDrawer(null);
+    document.querySelectorAll('[data-meeting]').forEach(card=>{
+      card.onclick = ()=> openMeetingDrawer(parseInt(card.dataset.meeting));
+    });
+  } else if(view==='import') {
+    attachImportHandlers();
+  }
+}
+
+function resolveOrCreateCompany(nameToId, importedName){
+  if(nameToId[importedName]!==undefined) return nameToId[importedName];
+  const newCompany = {
+    company_id: nextId(companies, 'company_id'),
+    area:null, name:importedName, name_en:null, ceo:null, pic:null, address:null, tel:null,
+    mail:null, website:null, registered_owner:null, related_company:null, banks:null, broker:null,
+    type_of_vessel:null, shipyard:null, tc_fleet:null, bbc_fleet:null,
+    tc_charterer:null, bbc_charterer:null, newbuilding:null
+  };
+  companies.push(newCompany);
+  nameToId[importedName] = newCompany.company_id;
+  return newCompany.company_id;
+}
+
+function attachImportHandlers(){
+  if(importStep===1){
+    const btnC = document.getElementById('impTypeCompanies');
+    const btnV = document.getElementById('impTypeVessels');
+    const btnM = document.getElementById('impTypeMeetings');
+    if(btnC) btnC.onclick = ()=>{ importTargetType='companies'; render(); };
+    if(btnV) btnV.onclick = ()=>{ importTargetType='vessels'; render(); };
+    if(btnM) btnM.onclick = ()=>{ importTargetType='meetings'; render(); };
+    const compSel = document.getElementById('impVesselCompany');
+    if(compSel) compSel.onchange = ()=>{ importVesselCompanyId = parseInt(compSel.value); };
+
+    const nextBtn = document.getElementById('impNextFromPaste');
+    if(nextBtn){
+      nextBtn.onclick = async ()=>{
+        const errEl = document.getElementById('impStep1Error');
+        errEl.textContent = '';
+        const fileInput = document.getElementById('impFileInput');
+        const pasteArea = document.getElementById('impPasteArea');
+        try{
+          let rows = [];
+          if(fileInput.files && fileInput.files[0]){
+            rows = await parseWorkbookFile(fileInput.files[0]);
+          } else if(pasteArea.value.trim()){
+            rows = parsePastedText(pasteArea.value);
+          } else {
+            errEl.textContent = 'ファイルを選択するか、表を貼り付けてください。';
+            return;
+          }
+          rows = rows.filter(r=>r.some(c=>(c||'').toString().trim()!==''));
+          if(rows.length===0){
+            errEl.textContent = 'データを読み取れませんでした。内容を確認してください。';
+            return;
+          }
+          importRawRows = rows;
+          importHeaderRowIndex = detectHeaderRow(rows);
+          const headers = rows[importHeaderRowIndex];
+          const hints = importTargetType==='companies' ? HEADER_HINTS_COMPANY : importTargetType==='vessels' ? HEADER_HINTS_VESSEL : HEADER_HINTS_MEETING;
+          importColumnMap = guessColumnMap(headers, hints);
+          importStep = 2;
+          render();
+        }catch(e){
+          errEl.textContent = '読み込み中にエラーが発生しました: ' + (e.message||e);
+        }
+      };
+    }
+  }
+
+  if(importStep===2){
+    const backBtn = document.getElementById('impBackTo1');
+    if(backBtn) backBtn.onclick = ()=>{ importStep=1; render(); };
+    const headerSel = document.getElementById('impHeaderRowSel');
+    if(headerSel){
+      headerSel.onchange = ()=>{
+        importHeaderRowIndex = parseInt(headerSel.value);
+        const headers = importRawRows[importHeaderRowIndex];
+        const hints = importTargetType==='companies' ? HEADER_HINTS_COMPANY : importTargetType==='vessels' ? HEADER_HINTS_VESSEL : HEADER_HINTS_MEETING;
+        importColumnMap = guessColumnMap(headers, hints);
+        render();
+      };
+    }
+    document.querySelectorAll('.impColSel').forEach(sel=>{
+      sel.onchange = ()=>{ importColumnMap[sel.dataset.field] = parseInt(sel.value); };
+    });
+    const next3 = document.getElementById('impNextTo3');
+    if(next3){
+      next3.onclick = ()=>{
+        document.querySelectorAll('.impColSel').forEach(sel=>{
+          importColumnMap[sel.dataset.field] = parseInt(sel.value);
+        });
+        const requiredField = importTargetType==='meetings' ? 'date' : 'name';
+        const reqIdx = importColumnMap[requiredField];
+        const errEl = document.getElementById('impStep2Error');
+        if(reqIdx===undefined || reqIdx<0){
+          errEl.textContent = importTargetType==='companies' ? '会社名の列を指定してください。' : importTargetType==='vessels' ? '船名の列を指定してください。' : '日付の列を指定してください。';
+          return;
+        }
+        importStep = 3;
+        render();
+      };
+    }
+  }
+
+  if(importStep===3){
+    const backBtn = document.getElementById('impBackTo2');
+    if(backBtn) backBtn.onclick = ()=>{ importStep=2; render(); };
+    const confirmBtn = document.getElementById('impConfirm');
+    if(confirmBtn){
+      confirmBtn.onclick = async ()=>{
+        const requiredField = importTargetType==='meetings' ? 'date' : 'name';
+        const records = buildImportRecords().filter(r=>r[requiredField]);
+        if(importTargetType==='companies'){
+          records.forEach(r=>{
+            delete r._import_company_name;
+            r.company_id = nextId(companies, 'company_id');
+            companies.push(r);
+          });
+          await saveCompanies();
+        } else if(importTargetType==='vessels') {
+          const nameToId = {};
+          companies.forEach(c=>{ nameToId[c.name] = c.company_id; });
+          records.forEach(r=>{
+            let cid = importVesselCompanyId;
+            const importedName = r._import_company_name;
+            delete r._import_company_name;
+            if(importedName) cid = resolveOrCreateCompany(nameToId, importedName);
+            r.vessel_id = nextId(vessels, 'vessel_id');
+            r.company_id = cid;
+            const comp = companies.find(c=>c.company_id===cid);
+            r.company_sheet = comp ? comp.name : '';
+            vessels.push(r);
+          });
+          await saveCompanies();
+          await saveVessels();
+        } else if(importTargetType==='meetings') {
+          const nameToId = {};
+          companies.forEach(c=>{ nameToId[c.name] = c.company_id; });
+          records.forEach(r=>{
+            let cid = importVesselCompanyId;
+            const importedName = r._import_company_name;
+            delete r._import_company_name;
+            if(importedName) cid = resolveOrCreateCompany(nameToId, importedName);
+            r.meeting_id = nextId(meetings, 'meeting_id');
+            r.company_id = cid;
+            meetings.push(r);
+          });
+          await saveCompanies();
+          await saveMeetings();
+        }
+        showToast(`${records.length}件を取り込みました`);
+        resetImportWizard();
+        view = importTargetType==='companies' ? 'companies' : importTargetType==='vessels' ? 'vessels' : 'meetings';
+        render();
+      };
+    }
+  }
+}
+
+// ---------- init ----------
+(async function init(){
+  await loadData();
+  resetImportWizard();
+  render();
+  setupModal();
+})();
+
+
+</script>
+</body>
+</html>
