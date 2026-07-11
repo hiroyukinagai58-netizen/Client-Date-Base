@@ -1242,7 +1242,7 @@ function renderCompanyVesselsTab(c, vList){
       <div class="vessel-mini" data-vessel-mini="${v.vessel_id}">
         <div>
           <div class="vessel-mini-name">${esc(v.name||'(船名未登録)')} ${v.type?`<span style="font-weight:400;color:var(--text-soft);font-size:11.5px;">／ ${esc(v.type)}</span>`:''}</div>
-          <div class="vessel-mini-sub">${v.imo?'IMO '+esc(v.imo)+' ・ ':''}${v.dwt?fmtNum(v.dwt)+' DWT ・ ':''}${esc(v.built||'')} ${v.charterers?'・ '+esc(v.charterers):''}</div>
+          <div class="vessel-mini-sub">${v.imo?'IMO '+esc(v.imo)+' ・ ':''}${v.dwt?fmtNum(v.dwt)+' DWT ・ ':''}${esc(fmtDate(v.built)||'')}${v.shipbuilder?' ・ '+esc(v.shipbuilder):''} ${v.charterers?'・ '+esc(v.charterers):''}</div>
         </div>
         ${sectionBadge(v.section)}
       </div>`;
