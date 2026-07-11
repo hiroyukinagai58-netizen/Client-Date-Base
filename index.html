@@ -385,15 +385,35 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_tNILpyY5pfs1ls9zheri
 let _saveTimer = null;
 
 // ---------- storage (Google Sheets) ----------
+function normalizeDateStr(v){
+  if(typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:/.test(v)){
+    const d = new Date(v);
+    if(!isNaN(d)){
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return y + '-' + m + '-' + day;
+    }
+  }
+  return v;
+}
+function normalizeLoadedRecords(list){
+  return (list||[]).map(r=>{
+    const o = {};
+    Object.keys(r).forEach(k=>{ o[k] = normalizeDateStr(r[k]); });
+    return o;
+  });
+}
+
 async function loadData(){
   try{
     showLoadingOverlay('データを読み込み中...');
     const res = await fetch(GAS_URL + '?action=load');
     const json = await res.json();
     if(json.ok && json.data){
-      companies = json.data.companies && json.data.companies.length > 0 ? json.data.companies : SEED_COMPANIES.slice();
-      vessels = json.data.vessels && json.data.vessels.length > 0 ? json.data.vessels : SEED_VESSELS.slice();
-      meetings = json.data.meetings && json.data.meetings.length > 0 ? json.data.meetings : [];
+      companies = json.data.companies && json.data.companies.length > 0 ? normalizeLoadedRecords(json.data.companies) : SEED_COMPANIES.slice();
+      vessels = json.data.vessels && json.data.vessels.length > 0 ? normalizeLoadedRecords(json.data.vessels) : SEED_VESSELS.slice();
+      meetings = json.data.meetings && json.data.meetings.length > 0 ? normalizeLoadedRecords(json.data.meetings) : [];
     } else {
       companies = SEED_COMPANIES.slice();
       vessels = SEED_VESSELS.slice();
@@ -530,7 +550,7 @@ function companyMeetings(cid){
 }
 function fmtDate(d){
   if(!d) return '';
-  return d;
+  return normalizeDateStr(d);
 }
 function sectionBadge(section){
   if(section==='In Fleet') return '<span class="badge badge-fleet">保有</span>';
@@ -641,7 +661,7 @@ function renderCompanyCard(c){
       ${c.tel ? `<div class="ccard-row"><span class="ico">☎</span><span>${esc(c.tel)}</span></div>` : ''}
       ${c.mail ? `<div class="ccard-row"><span class="ico">✉</span><span>${esc(c.mail)}</span></div>` : ''}
       ${c.broker ? `<div class="ccard-row"><span class="ico">🤝</span><span>${esc(c.broker)}</span></div>` : ''}
-      ${lastMeeting ? `<div class="ccard-row"><span class="ico">💬</span><span>直近面談: ${esc(lastMeeting.date||'-')}</span></div>` : ''}
+      ${lastMeeting ? `<div class="ccard-row"><span class="ico">💬</span><span>直近面談: ${esc(fmtDate(lastMeeting.date)||'-')}</span></div>` : ''}
     </div>
     ${(vCount>0 || mList.length>0) ? `
     <div class="ccard-stats">
@@ -807,7 +827,7 @@ function renderMeetingCard(m){
         <p class="ccard-name">${esc(comp?comp.name:'(会社未設定)')}</p>
         <p class="ccard-ceo">${m.attendees ? '出席: '+esc(m.attendees) : ''}</p>
       </div>
-      <span class="ccard-area">${esc(m.date||'-')}</span>
+      <span class="ccard-area">${esc(fmtDate(m.date)||'-')}</span>
     </div>
     <div class="ccard-meta">
       ${m.category ? `<div class="ccard-row"><span class="ico">🏷</span><span>${esc(m.category)}</span></div>` : ''}
@@ -1244,7 +1264,7 @@ function renderCompanyMeetingsTab(c, mList){
       html += `
       <div class="vessel-mini" data-meeting-mini="${m.meeting_id}" style="align-items:flex-start;">
         <div style="min-width:0;">
-          <div class="vessel-mini-name">${esc(m.date||'(日付未登録)')} ${m.category?`<span style="font-weight:400;color:var(--text-soft);font-size:11.5px;">／ ${esc(m.category)}</span>`:''}</div>
+          <div class="vessel-mini-name">${esc(fmtDate(m.date)||'(日付未登録)')} ${m.category?`<span style="font-weight:400;color:var(--text-soft);font-size:11.5px;">／ ${esc(m.category)}</span>`:''}</div>
           <div class="vessel-mini-sub">${m.attendees?'出席: '+esc(m.attendees):''}</div>
           ${m.summary?`<div style="font-size:12px;color:var(--text);margin-top:6px;white-space:pre-line;">${nl2br(m.summary.length>120?m.summary.slice(0,120)+'…':m.summary)}</div>`:''}
           ${m.next_action?`<div style="font-size:11.5px;color:var(--accent-dark);margin-top:5px;">次のアクション: ${esc(m.next_action.length>80?m.next_action.slice(0,80)+'…':m.next_action)}</div>`:''}
@@ -1459,7 +1479,7 @@ function renderMeetingDrawerOverlay(isNew, id){
         <div class="drawer-head-top">
           <div>
             <span class="drawer-area">面談記録</span>
-            <h2>${esc(m.date||(isNew?'新規面談記録':'(日付未登録)'))}</h2>
+            <h2>${esc(fmtDate(m.date)||(isNew?'新規面談記録':'(日付未登録)'))}</h2>
             <p class="ceo">${esc(comp?comp.name:'')}</p>
           </div>
           <button class="close-btn" id="mDrawerClose">✕</button>
@@ -1521,7 +1541,7 @@ function renderMeetingEditForm(m, isNew){
       </div>
       <div class="field">
         <label>${FIELD_LABELS_M.date}</label>
-        <input id="mf_date" type="date" value="${esc(m.date||'')}">
+        <input id="mf_date" type="date" value="${esc(fmtDate(m.date)||'')}">
       </div>
       ${FIELD_ORDER_M.filter(f=>f!=='date').map(f=>{
         const isLong = longFields.includes(f);
