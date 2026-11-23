@@ -405,25 +405,67 @@ function normalizeLoadedRecords(list){
   });
 }
 
+// ---- save safety guard ----
+// _loadOk: false のときは保存しない（読み込み失敗時に初期データで上書きする事故を防ぐ）
+// _baselineIds: 読み込み時点でサーバーにあったID。保存直前にサーバーを再確認し、
+//   この後に別の画面/端末で追加されたレコードがあれば上書きせず停止する。
+let _loadOk = false;
+let _saveBlocked = false;
+let _baselineIds = { companies: new Set(), vessels: new Set(), meetings: new Set() };
+const _ID_KEY = { companies:'company_id', vessels:'vessel_id', meetings:'meeting_id' };
+
+function _idSet(list, key){ return new Set((list||[]).map(r => String(r[key]))); }
+function _setBaseline(data){
+  Object.keys(_ID_KEY).forEach(t => { _baselineIds[t] = _idSet(data[t], _ID_KEY[t]); });
+}
+function _backupLocal(data){
+  try{
+    localStorage.setItem('cdb_last_server_snapshot', JSON.stringify({ at: new Date().toISOString(), data }));
+  }catch(e){ /* storage unavailable: ignore */ }
+}
+function showSafetyBanner(msg){
+  let el = document.getElementById('_safetyBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = '_safetyBanner';
+    el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:10000;background:#b00020;color:#fff;padding:10px 16px;font-size:14px;font-weight:600;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '';
+  const span = document.createElement('span'); span.textContent = msg; el.appendChild(span);
+  const btn = document.createElement('button');
+  btn.textContent = '再読み込み';
+  btn.style.cssText = 'margin-left:12px;padding:4px 12px;border:1px solid #fff;background:transparent;color:#fff;border-radius:4px;cursor:pointer';
+  btn.onclick = () => location.reload();
+  el.appendChild(btn);
+}
+
 async function loadData(){
+  _loadOk = false;
   try{
     showLoadingOverlay('データを読み込み中...');
-    const res = await fetch(GAS_URL + '?action=load');
+    const res = await fetch(GAS_URL + '?action=load', { cache: 'no-store' });
     const json = await res.json();
     if(json.ok && json.data){
-      companies = json.data.companies && json.data.companies.length > 0 ? normalizeLoadedRecords(json.data.companies) : SEED_COMPANIES.slice();
-      vessels = json.data.vessels && json.data.vessels.length > 0 ? normalizeLoadedRecords(json.data.vessels) : SEED_VESSELS.slice();
-      meetings = json.data.meetings && json.data.meetings.length > 0 ? normalizeLoadedRecords(json.data.meetings) : [];
+      const d = json.data;
+      const serverEmpty = !(d.companies && d.companies.length) && !(d.vessels && d.vessels.length) && !(d.meetings && d.meetings.length);
+      companies = d.companies && d.companies.length > 0 ? normalizeLoadedRecords(d.companies) : (serverEmpty ? SEED_COMPANIES.slice() : []);
+      vessels = d.vessels && d.vessels.length > 0 ? normalizeLoadedRecords(d.vessels) : (serverEmpty ? SEED_VESSELS.slice() : []);
+      meetings = d.meetings && d.meetings.length > 0 ? normalizeLoadedRecords(d.meetings) : [];
+      _setBaseline(d);
+      if(!serverEmpty) _backupLocal(d);
+      _loadOk = true;
     } else {
-      companies = SEED_COMPANIES.slice();
-      vessels = SEED_VESSELS.slice();
-      meetings = [];
+      throw new Error('load response not ok');
     }
   }catch(e){
     console.error('load error:', e);
+    // 表示用に初期データを出すが、保存は停止する
     companies = SEED_COMPANIES.slice();
     vessels = SEED_VESSELS.slice();
     meetings = [];
+    _saveBlocked = true;
+    showSafetyBanner('データの読み込みに失敗しました。表示中は古い初期データです。保存は停止しています。');
   } finally {
     hideLoadingOverlay();
   }
@@ -440,7 +482,49 @@ function normalizeRecords(records, leadFields, fieldOrder){
 }
 
 async function _saveAll(){
+  if(!_loadOk || _saveBlocked){
+    showToast('保存を停止中です。再読み込みしてください');
+    return;
+  }
   try{
+    // 1) 保存直前にサーバーの最新状態を確認
+    const res = await fetch(GAS_URL + '?action=load', { cache: 'no-store' });
+    const json = await res.json();
+    if(!(json.ok && json.data)) throw new Error('pre-save check failed');
+    const server = json.data;
+    const local = { companies, vessels, meetings };
+
+    // 2) 読み込み後に他の画面/端末で追加されたレコードがあれば上書きしない
+    const foreign = {};
+    let foreignCount = 0;
+    Object.keys(_ID_KEY).forEach(t => {
+      const key = _ID_KEY[t];
+      const extra = (server[t]||[]).filter(r => !_baselineIds[t].has(String(r[key])));
+      foreign[t] = extra.length; foreignCount += extra.length;
+    });
+    if(foreignCount > 0){
+      _saveBlocked = true;
+      showSafetyBanner(`他の画面で更新されたデータがあります（会社${foreign.companies}・船舶${foreign.vessels}・面談${foreign.meetings}件）。上書きを防ぐため保存を停止しました。`);
+      return;
+    }
+
+    // 3) 一度に大量に減る保存は確認する
+    const lost = {};
+    Object.keys(_ID_KEY).forEach(t => {
+      lost[t] = Math.max(0, (server[t]||[]).length - local[t].length);
+    });
+    if(lost.companies >= 2 || lost.vessels >= 10 || lost.meetings >= 3){
+      const okGo = confirm(`この保存でサーバーのデータが減ります（会社 -${lost.companies}・船舶 -${lost.vessels}・面談 -${lost.meetings}）。\n本当に保存しますか？`);
+      if(!okGo){
+        _saveBlocked = true;
+        showSafetyBanner('保存を中止しました。再読み込みして最新データを表示してください。');
+        return;
+      }
+    }
+
+    // 4) 保存前のサーバー状態をブラウザ内に控えておく
+    _backupLocal(server);
+
     const payload = {
       companies: normalizeRecords(companies, ['company_id'], FIELD_ORDER_C),
       vessels: normalizeRecords(vessels, ['vessel_id','company_id','company_sheet'], FIELD_ORDER_V),
@@ -450,7 +534,12 @@ async function _saveAll(){
       method: 'POST',
       body: JSON.stringify(payload)
     });
-  }catch(e){ console.error('save error:', e); }
+    // 保存成功後は今の内容を基準にする
+    _setBaseline(payload);
+  }catch(e){
+    console.error('save error:', e);
+    showToast('保存に失敗しました。通信状況を確認してください');
+  }
 }
 
 function scheduleSave(){
